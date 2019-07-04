@@ -2,7 +2,7 @@
 
 DEFINE_COMPONENT(PositionComponent)
 
-PositionComponent::PositionComponent() : x(0.0f), y(0.0f)
+PositionComponent::PositionComponent() : x(0), y(0)
 {
 
 }

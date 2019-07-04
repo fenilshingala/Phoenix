@@ -15,18 +15,15 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\Middleware\ECS\EntityManager.cpp">
+    <ClCompile Include="..\..\Common\Renderer\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Middleware\ECS\Component.cpp">
+    <ClCompile Include="..\..\Common\Renderer\VulkanRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Middleware\ECS\EntityManager.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Middleware\ECS\Component.h">
+    <ClInclude Include="..\..\Common\Renderer\VulkanRenderer.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
