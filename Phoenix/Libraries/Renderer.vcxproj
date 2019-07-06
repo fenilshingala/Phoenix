@@ -156,6 +156,7 @@
     <ClCompile Include="..\..\Common\Renderer\VulkanRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\Common\Renderer\keyBindings.h" />
     <ClInclude Include="..\..\Common\Renderer\VulkanRenderer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
