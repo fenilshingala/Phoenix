@@ -6,8 +6,8 @@
 #include <cstdlib> // EXIT_SUCCESS, EXIT_FAILURE
 #include <iostream>
 
-#include "../../Common/Thirdparty/TINYSTL/vector.h"
-#include "../../Common/Thirdparty/TINYSTL/string.h"
+#include <TINYSTL/vector.h>
+#include <TINYSTL/string.h>
 
 struct GLFWwindow;
 typedef void(keyCallBackSignature)(GLFWwindow*, int, int, int, int);
@@ -73,6 +73,11 @@ private:
 	void createCommandBuffers();
 	void createSyncObjects();
 
+	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+	void createVertexBuffer();
+	void createIndexBuffer();
+
 	void destroyInstance();
 
 	bool checkValidationLayerSupport();
@@ -101,6 +106,11 @@ private:
 	tinystl::vector<VkFramebuffer> swapChainFramebuffers;
 	VkCommandPool commandPool;
 	tinystl::vector<VkCommandBuffer> commandBuffers;
+
+	VkBuffer vertexBuffer;
+	VkDeviceMemory vertexBufferMemory;
+	VkBuffer indexBuffer;
+	VkDeviceMemory indexBufferMemory;
 
 	tinystl::vector<VkSemaphore> imageAvailableSemaphores;
 	tinystl::vector<VkSemaphore> renderFinishedSemaphores;
