@@ -67,6 +67,7 @@ private:
 	void createImageViews();
 	VkShaderModule createShaderModule(const tinystl::vector<char>& code);
 	void createRenderPass();
+	void createDescriptorSetLayout();
 	void createGraphicsPipeline();
 	void createFramebuffers();
 	void createCommandPool();
@@ -77,6 +78,11 @@ private:
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 	void createVertexBuffer();
 	void createIndexBuffer();
+	void createUniformBuffers();
+	void updateUniformBuffer(uint32_t currentImage);
+	
+	void createDescriptorPool();
+	void createDescriptorSets();
 
 	void destroyInstance();
 
@@ -100,6 +106,8 @@ private:
 	VkExtent2D swapChainExtent;
 	tinystl::vector<VkShaderModule> shaderModules;
 	VkRenderPass renderPass;
+
+	VkDescriptorSetLayout descriptorSetLayout;
 	VkPipelineLayout pipelineLayout;
 	VkPipeline graphicsPipeline;
 
@@ -111,6 +119,11 @@ private:
 	VkDeviceMemory vertexBufferMemory;
 	VkBuffer indexBuffer;
 	VkDeviceMemory indexBufferMemory;
+	tinystl::vector<VkBuffer> uniformBuffers;
+	tinystl::vector<VkDeviceMemory> uniformBuffersMemory;
+
+	VkDescriptorPool descriptorPool;
+	tinystl::vector<VkDescriptorSet> descriptorSets;
 
 	tinystl::vector<VkSemaphore> imageAvailableSemaphores;
 	tinystl::vector<VkSemaphore> renderFinishedSemaphores;
