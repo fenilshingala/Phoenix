@@ -74,13 +74,27 @@ private:
 	void createCommandBuffers();
 	void createSyncObjects();
 
+	VkCommandBuffer beginSingleTimeCommands();
+	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
+
 	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+
 	void createVertexBuffer();
 	void createIndexBuffer();
 	void createUniformBuffers();
 	void updateUniformBuffer(uint32_t currentImage);
 	
+	void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
+		VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+	VkImageView createImageView(VkImage image, VkFormat format);
+	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+
+	void createTextureImage();
+	void createTextureImageView();
+	void createTextureSampler();
+
 	void createDescriptorPool();
 	void createDescriptorSets();
 
@@ -121,6 +135,11 @@ private:
 	VkDeviceMemory indexBufferMemory;
 	tinystl::vector<VkBuffer> uniformBuffers;
 	tinystl::vector<VkDeviceMemory> uniformBuffersMemory;
+
+	VkImage textureImage;
+	VkDeviceMemory textureImageMemory;
+	VkImageView textureImageView;
+	VkSampler textureSampler;
 
 	VkDescriptorPool descriptorPool;
 	tinystl::vector<VkDescriptorSet> descriptorSets;
