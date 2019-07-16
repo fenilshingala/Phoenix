@@ -39,6 +39,7 @@ public:
 	void destroyWindow();
 
 	// VULKAN
+	void enableDepth();
 	void initVulkan();
 	void cleanupVulkan();
 	void drawFrame();
@@ -110,6 +111,8 @@ private:
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 	VkDevice device; // logical
 	
+	bool depthEnabled = false;
+
 	VkQueue graphicsQueue;
 	VkQueue presentQueue;
 	

@@ -1,10 +1,11 @@
 #include "VulkanRenderer.h"
 
-class HelloTriangleApplication
+class Application
 {
 public:
 	void run() {
 		renderer.initWindow();
+		renderer.enableDepth();
 		renderer.initVulkan();
 
 		while (!renderer.windowShouldClose() && !exit)
@@ -39,7 +40,7 @@ private:
 
 int main()
 {
-	HelloTriangleApplication app;
+	Application app;
 	try {
 		app.run();
 	}
