@@ -94,12 +94,7 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
 size_t currentFrame = 0;
 tinystl::vector<VkFence> inFlightFences;
 
-struct UniformBufferObject
-{
-	alignas(16) glm::mat4 model;
-	alignas(16) glm::mat4 view;
-	alignas(16) glm::mat4 proj;
-};
+
 
 const char* deviceExtensions[] = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME
@@ -116,38 +111,29 @@ void VulkanRenderer::initVulkan()
 	createSurface();
 	pickPhysicalDevice(); // implicitly destroyed with instance
 	createLogicalDevice();
+};
 
-	createSwapChain();
-	createImageViews();
-	//createRenderPass();
+void VulkanRenderer::addSwapChain(PH_SwapChain* swapchain)
+{
+	createSwapChain(swapchain);
+	swapChains.emplace_back(swapchain);
+	createImageViews(swapchain);
 	createDescriptorSetLayout();
 	createCommandPool();//
 }
 
-void VulkanRenderer::initVulkan2(){
-	//createGraphicsPipeline();
-	//createCommandPool();
-	
-	/*if (depthEnabled)
-	{
-		createDepthResources();
-	}*/
-
-	//createFramebuffers();
-
-	//createVertexBuffer();
-	//createIndexBuffer();
-	createUniformBuffers();
+void VulkanRenderer::initVulkan2(PH_SwapChain* pSwapChain)
+{
+	//createUniformBuffers(pSwapChain);
 
 	createTextureImage();
 	createTextureImageView();
 	createTextureSampler();
 
-	createDescriptorPool();
-	createDescriptorSets();
+	createDescriptorPool(pSwapChain);
+	createDescriptorSets(pSwapChain);
 
 	createSyncObjects();
-	//createCommandBuffers();
 }
 
 void VulkanRenderer::destroyGraphicsPipeline(PH_Pipeline& mPipeline)
@@ -178,12 +164,6 @@ void VulkanRenderer::cleanupVulkan()
 
 	vkDestroyCommandPool(device, commandPool, nullptr);
 
-	/*for (VkFramebuffer framebuffer : swapChainFramebuffers)
-	{
-		vkDestroyFramebuffer(device, framebuffer, nullptr);
-	}*/
-
-	//vkDestroyPipeline(device, graphicsPipeline, nullptr);
 	for (PH_Pipeline& pipeline : mPipelines)
 	{
 		destroyGraphicsPipeline(pipeline);
@@ -194,17 +174,23 @@ void VulkanRenderer::cleanupVulkan()
 		vkDestroyShaderModule(device, module, nullptr);
 	}
 
-	//vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
 	vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
-	//vkDestroyRenderPass(device, renderPass, nullptr);
 	
-	for (VkImageView imageView : swapChainImageViews)
+	/*for (VkImageView imageView : swapChainImageViews)
 	{
 		vkDestroyImageView(device, imageView, nullptr);
+	}*/
+
+	//vkDestroySwapchainKHR(device, swapChain, nullptr);
+	for (PH_SwapChain* swapchain : swapChains)
+	{
+		for (VkImageView imageView : swapchain->swapChainImageViews)
+		{
+			vkDestroyImageView(device, imageView, nullptr);
+		}
+		vkDestroySwapchainKHR(device, swapchain->swapChain, nullptr);
 	}
 
-	vkDestroySwapchainKHR(device, swapChain, nullptr);
-	
 	for (PH_Pipeline& pipeline : mPipelines)
 	{
 		vkDestroyBuffer(device, pipeline.indexBuffer, nullptr);
@@ -213,18 +199,17 @@ void VulkanRenderer::cleanupVulkan()
 		vkFreeMemory(device, pipeline.vertexBufferMemory, nullptr);
 	}
 
-	for (size_t i = 0; i < swapChainImages.size(); i++)
+	for (PH_SwapChain* swapchain : swapChains)
 	{
-		vkDestroyBuffer(device, uniformBuffers[i], nullptr);
-		vkFreeMemory(device, uniformBuffersMemory[i], nullptr);
+		for (size_t i = 0; i < swapchain->swapChainImages.size(); i++)
+		{
+			for (PH_Buffer* buffer : swapchain->buffers)
+			{
+				vkDestroyBuffer(device, buffer->mBuffers[i], nullptr);
+				vkFreeMemory(device, buffer->mBuffersMemory[i], nullptr);
+			}
+		}
 	}
-
-	/*if (depthEnabled)
-	{
-		vkDestroyImageView(device, depthImageView, nullptr);
-		vkDestroyImage(device, depthImage, nullptr);
-		vkFreeMemory(device, depthImageMemory, nullptr);
-	}*/
 
 	vkDestroySampler(device, textureSampler, nullptr);
 
@@ -241,48 +226,48 @@ void VulkanRenderer::cleanupVulkan()
 }
 
 
-void VulkanRenderer::cleanupSwapChain()
+void VulkanRenderer::cleanupSwapChain(PH_SwapChain* pSwapChain)
 {
-	/*for (size_t i = 0; i < swapChainFramebuffers.size(); i++) {
-		vkDestroyFramebuffer(device, swapChainFramebuffers[i], nullptr);
-	}*/
-
 	vkFreeCommandBuffers(device, commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
-
-	//vkDestroyPipeline(device, graphicsPipeline, nullptr);
 
 	for (PH_Pipeline& pipeline : mPipelines)
 	{
 		destroyGraphicsPipeline(pipeline);
 	}
 
-	//vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
-	//vkDestroyRenderPass(device, renderPass, nullptr);
-
-	/*if (depthEnabled)
+	for (size_t i = 0; i < pSwapChain->swapChainImageViews.size(); i++)
 	{
-		vkDestroyImageView(device, depthImageView, nullptr);
-		vkDestroyImage(device, depthImage, nullptr);
-		vkFreeMemory(device, depthImageMemory, nullptr);
-	}*/
-
-	for (size_t i = 0; i < swapChainImageViews.size(); i++)
-	{
-		vkDestroyImageView(device, swapChainImageViews[i], nullptr);
+		vkDestroyImageView(device, pSwapChain->swapChainImageViews[i], nullptr);
 	}
 
-	vkDestroySwapchainKHR(device, swapChain, nullptr);
+	//vkDestroySwapchainKHR(device, swapChain, nullptr);
+	vkDestroySwapchainKHR(device, pSwapChain->swapChain, nullptr);
+	
 
-	for (size_t i = 0; i < swapChainImages.size(); i++)
+	/*for (PH_SwapChain* swapchain : swapChains)
 	{
-		vkDestroyBuffer(device, uniformBuffers[i], nullptr);
-		vkFreeMemory(device, uniformBuffersMemory[i], nullptr);
+		for (size_t i = 0; i < swapchain->swapChainImages.size(); i++)
+		{
+			vkDestroyBuffer(device, swapchain->buffers[i], nullptr);
+			vkFreeMemory(device, swapchain->buffers[i], nullptr);
+		}
+	}*/
+	for (PH_SwapChain* swapchain : swapChains)
+	{
+		for (size_t i = 0; i < swapchain->swapChainImages.size(); i++)
+		{
+			for (PH_Buffer* buffer : swapchain->buffers)
+			{
+				vkDestroyBuffer(device, buffer->mBuffers[i], nullptr);
+				vkFreeMemory(device, buffer->mBuffersMemory[i], nullptr);
+			}
+		}
 	}
 
 	vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 }
 
-void VulkanRenderer::recreateSwapChain()
+void VulkanRenderer::recreateSwapChain(PH_SwapChain* pSwapChain)
 {
 	getFramebufferSize(window, &WIDTH, &HEIGHT);
 	while (WIDTH == 0 || HEIGHT == 0)
@@ -293,15 +278,15 @@ void VulkanRenderer::recreateSwapChain()
 
 	vkDeviceWaitIdle(device);
 
-	cleanupSwapChain();
+	cleanupSwapChain(pSwapChain);
 
-	createSwapChain();
-	createImageViews();
+	createSwapChain(pSwapChain);
+	createImageViews(pSwapChain);
 	//createRenderPass();
 	//createGraphicsPipeline();
 	for (PH_Pipeline& pipeline : mPipelines)
 	{
-		createGraphicsPipeline(pipeline, true);
+		createGraphicsPipeline(pSwapChain, pipeline, true);
 	}
 
 	/*if (depthEnabled)
@@ -310,12 +295,16 @@ void VulkanRenderer::recreateSwapChain()
 	}*/
 
 	//createFramebuffers();
-	createUniformBuffers();
-	createDescriptorPool();
-	createDescriptorSets();
+	//createUniformBuffers(pSwapChain);
+	for (PH_Buffer* buffer : pSwapChain->buffers)
+	{
+		createUniformBuffers(pSwapChain, buffer, true);
+	}
+	createDescriptorPool(pSwapChain);
+	createDescriptorSets(pSwapChain);
 	for (PH_Pipeline& pipeline : mPipelines)
 	{
-		createCommandBuffers(pipeline);
+		createCommandBuffers(*pSwapChain, pipeline);
 	}
 }
 
@@ -767,7 +756,7 @@ VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& 
 	}
 }
 
-void VulkanRenderer::createSwapChain()
+void VulkanRenderer::createSwapChain(PH_SwapChain* pSwapChain)
 {
 	SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice, surface);
 
@@ -776,7 +765,7 @@ void VulkanRenderer::createSwapChain()
 	VkExtent2D extent				 = chooseSwapExtent(window, swapChainSupport.capabilities, WIDTH, HEIGHT);
 
 	swapChainImageFormat = surfaceFormat.format;
-	swapChainExtent = extent;
+	pSwapChain->swapChainExtent = extent;
 
 	uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
 	if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount)
@@ -814,22 +803,22 @@ void VulkanRenderer::createSwapChain()
 	createInfo.clipped = VK_TRUE;
 	createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-	if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain) != VK_SUCCESS)
+	if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &pSwapChain->swapChain) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to create swap chain!");
 	}
 
-	vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
-	swapChainImages.resize(imageCount);
-	vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
+	vkGetSwapchainImagesKHR(device, pSwapChain->swapChain, &imageCount, nullptr);
+	pSwapChain->swapChainImages.resize(imageCount);
+	vkGetSwapchainImagesKHR(device, pSwapChain->swapChain, &imageCount, pSwapChain->swapChainImages.data());
 }
 
-void VulkanRenderer::createImageViews()
+void VulkanRenderer::createImageViews(PH_SwapChain* pSwapChain)
 {
-	swapChainImageViews.resize(swapChainImages.size());
-	for (size_t i = 0; i < swapChainImages.size(); i++)
+	pSwapChain->swapChainImageViews.resize(pSwapChain->swapChainImages.size());
+	for (size_t i = 0; i < pSwapChain->swapChainImages.size(); i++)
 	{
-		swapChainImageViews[i] = createImageView(swapChainImages[i], swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
+		pSwapChain->swapChainImageViews[i] = createImageView(pSwapChain->swapChainImages[i], swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
 	}
 }
 
@@ -1004,7 +993,7 @@ void VulkanRenderer::createDescriptorSetLayout()
 }
 
 
-void VulkanRenderer::createGraphicsPipeline(PH_Pipeline& mPipeline, bool recreate)
+void VulkanRenderer::createGraphicsPipeline(PH_SwapChain* pSwapChain, PH_Pipeline& mPipeline, bool recreate)
 {
 	createRenderPass(mPipeline);
 
@@ -1029,7 +1018,7 @@ void VulkanRenderer::createGraphicsPipeline(PH_Pipeline& mPipeline, bool recreat
 	VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
-	vertexInputInfo.sType = mPipeline.mVertexInputState.sType;
+	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 	
 	//VkVertexInputBindingDescription bindingDescription						 = Vertex::getBindingDescription();
 	//tinystl::vector<VkVertexInputAttributeDescription> attributeDescriptions = Vertex::getAttributeDescriptions();
@@ -1047,14 +1036,14 @@ void VulkanRenderer::createGraphicsPipeline(PH_Pipeline& mPipeline, bool recreat
 	VkViewport viewport = {};
 	viewport.x = 0.0f;
 	viewport.y = 0.0f;
-	viewport.width = (float)swapChainExtent.width;
-	viewport.height = (float)swapChainExtent.height;
+	viewport.width = (float)pSwapChain->swapChainExtent.width;
+	viewport.height = (float)pSwapChain->swapChainExtent.height;
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
 
 	VkRect2D scissor = {};
 	scissor.offset = { 0, 0 };
-	scissor.extent = swapChainExtent;
+	scissor.extent = pSwapChain->swapChainExtent;
 
 	VkPipelineViewportStateCreateInfo viewportState = {};
 	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -1161,9 +1150,9 @@ void VulkanRenderer::createGraphicsPipeline(PH_Pipeline& mPipeline, bool recreat
 	//
 	if (depthEnabled)
 	{
-		createDepthResources(mPipeline);
+		createDepthResources(pSwapChain, mPipeline);
 	}
-	createFramebuffers(mPipeline);
+	createFramebuffers(pSwapChain, mPipeline);
 
 	createVertexBuffer(mPipeline);
 	createIndexBuffer(mPipeline);
@@ -1175,14 +1164,14 @@ void VulkanRenderer::createGraphicsPipeline(PH_Pipeline& mPipeline, bool recreat
 }
 
 
-void VulkanRenderer::createFramebuffers(PH_Pipeline& mPipeline)
+void VulkanRenderer::createFramebuffers(PH_SwapChain* pSwapChain, PH_Pipeline& mPipeline)
 {
-	mPipeline.mFramebuffers.resize(swapChainImageViews.size());
-	for (size_t i = 0; i < swapChainImageViews.size(); i++)
+	mPipeline.mFramebuffers.resize(pSwapChain->swapChainImageViews.size());
+	for (size_t i = 0; i < pSwapChain->swapChainImageViews.size(); i++)
 	{
 		tinystl::vector<VkImageView> attachments;
 		
-		attachments.emplace_back(swapChainImageViews[i]);
+		attachments.emplace_back(pSwapChain->swapChainImageViews[i]);
 		if (depthEnabled)
 		{
 			attachments.emplace_back(mPipeline.depthImageView);
@@ -1193,8 +1182,8 @@ void VulkanRenderer::createFramebuffers(PH_Pipeline& mPipeline)
 		framebufferInfo.renderPass = mPipeline.renderPass;
 		framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
 		framebufferInfo.pAttachments = attachments.data();
-		framebufferInfo.width = swapChainExtent.width;
-		framebufferInfo.height = swapChainExtent.height;
+		framebufferInfo.width = pSwapChain->swapChainExtent.width;
+		framebufferInfo.height = pSwapChain->swapChainExtent.height;
 		framebufferInfo.layers = 1;
 
 		if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &mPipeline.mFramebuffers[i]) != VK_SUCCESS)
@@ -1216,7 +1205,7 @@ void VulkanRenderer::createCommandPool()
 	}
 }
 
-void VulkanRenderer::createCommandBuffers(PH_Pipeline& mPipeline)
+void VulkanRenderer::createCommandBuffers(PH_SwapChain& swapChain, PH_Pipeline& mPipeline)
 {
 	commandBuffers.resize(mPipeline.mFramebuffers.size());
 
@@ -1248,7 +1237,7 @@ void VulkanRenderer::createCommandBuffers(PH_Pipeline& mPipeline)
 		renderPassInfo.renderPass = mPipeline.renderPass;
 		renderPassInfo.framebuffer = mPipeline.mFramebuffers[i];
 		renderPassInfo.renderArea.offset = { 0, 0 };
-		renderPassInfo.renderArea.extent = swapChainExtent;
+		renderPassInfo.renderArea.extent = swapChain.swapChainExtent;
 		
 		tinystl::vector<VkClearValue> clearValues;
 		VkClearValue clearValue;
@@ -1311,24 +1300,44 @@ void VulkanRenderer::createSyncObjects()
 	}
 }
 
-void VulkanRenderer::drawFrame()
+uint32_t VulkanRenderer::acquireNextImage(PH_SwapChain* pSwapChain)
 {
 	vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
-	
+
 	uint32_t imageIndex;
-	VkResult result = vkAcquireNextImageKHR(device, swapChain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+	VkResult result = vkAcquireNextImageKHR(device, pSwapChain->swapChain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
 	{
-		recreateSwapChain();
-		return;
+		recreateSwapChain(pSwapChain);
+		return -1;
 	}
 	else if (result != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to acquire swap chain image!");
 	}
 
-	updateUniformBuffer(imageIndex);
+	return imageIndex;
+}
+
+void VulkanRenderer::drawFrame(PH_SwapChain* pSwapChain, uint32_t imageIndex)
+{
+	/*vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
+	
+	uint32_t imageIndex;
+	VkResult result = vkAcquireNextImageKHR(device, pSwapChain->swapChain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+	{
+		recreateSwapChain(pSwapChain);
+		return;
+	}
+	else if (result != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to acquire swap chain image!");
+	}*/
+
+	//updateUniformBuffer(imageIndex);
 
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -1358,17 +1367,17 @@ void VulkanRenderer::drawFrame()
 	presentInfo.waitSemaphoreCount = 1;
 	presentInfo.pWaitSemaphores = signalSemaphores;
 
-	VkSwapchainKHR swapChains[] = { swapChain };
+	VkSwapchainKHR swapChains[] = { pSwapChain->swapChain };
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = swapChains;
 	presentInfo.pImageIndices = &imageIndex;
 	presentInfo.pResults = nullptr; // Optional
 
-	result = vkQueuePresentKHR(presentQueue, &presentInfo);
+	VkResult result = vkQueuePresentKHR(presentQueue, &presentInfo);
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized)
 	{
 		framebufferResized = false;
-		recreateSwapChain();
+		recreateSwapChain(pSwapChain);
 	}
 	else if (result != VK_SUCCESS)
 	{
@@ -1552,36 +1561,28 @@ void VulkanRenderer::createIndexBuffer(PH_Pipeline& mPipeline)
 	vkFreeMemory(device, stagingBufferMemory, nullptr);
 }
 
-void VulkanRenderer::createUniformBuffers()
+void VulkanRenderer::createUniformBuffers(PH_SwapChain* pSwapChain, PH_Buffer* buffer, bool recreate)
 {
-	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+	VkDeviceSize bufferSize = buffer->bufferDesc.mBufferSize;
 
-	uniformBuffers.resize(swapChainImages.size());
-	uniformBuffersMemory.resize(swapChainImages.size());
+	buffer->mBuffers.resize(pSwapChain->swapChainImages.size());
+	buffer->mBuffersMemory.resize(pSwapChain->swapChainImages.size());
 
-	for (size_t i = 0; i < swapChainImages.size(); i++)
+	for (size_t i = 0; i < pSwapChain->swapChainImages.size(); i++)
 	{
-		createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformBuffersMemory[i]);
+		createBuffer(bufferSize, buffer->bufferDesc.mUsage, buffer->bufferDesc.mProperties, buffer->mBuffers[i], buffer->mBuffersMemory[i]);
 	}
+
+	if(!recreate)
+		pSwapChain->buffers.emplace_back(buffer);
 }
 
-void VulkanRenderer::updateUniformBuffer(uint32_t currentImage)
+void VulkanRenderer::updateUniformBuffer(uint32_t currentImage, PH_Buffer& buffer)
 {
-	static std::chrono::time_point<std::chrono::steady_clock>	startTime = std::chrono::high_resolution_clock::now();
-
-	std::chrono::time_point<std::chrono::steady_clock>		  currentTime = std::chrono::high_resolution_clock::now();
-	float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-
-	UniformBufferObject ubo = {};
-	ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
-	ubo.proj[1][1] *= -1;
-
 	void* data;
-	vkMapMemory(device, uniformBuffersMemory[currentImage], 0, sizeof(ubo), 0, &data);
-		memcpy(data, &ubo, sizeof(ubo));
-	vkUnmapMemory(device, uniformBuffersMemory[currentImage]);
+	vkMapMemory(device, buffer.mBuffersMemory[currentImage], 0, buffer.size, 0, &data);
+		memcpy(data, buffer.data, buffer.size);
+	vkUnmapMemory(device, buffer.mBuffersMemory[currentImage]);
 }
 
 
@@ -1730,11 +1731,11 @@ void VulkanRenderer::transitionImageLayout(VkImage image, VkFormat format, VkIma
 }
 
 
-void VulkanRenderer::createDepthResources(PH_Pipeline& mPipeline)
+void VulkanRenderer::createDepthResources(PH_SwapChain* pSwapChain, PH_Pipeline& mPipeline)
 {
 	VkFormat depthFormat = findDepthFormat(physicalDevice);
 
-	createImage(swapChainExtent.width, swapChainExtent.height, depthFormat,
+	createImage(pSwapChain->swapChainExtent.width, pSwapChain->swapChainExtent.height, depthFormat,
 		VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		mPipeline.depthImage, mPipeline.depthImageMemory);
 	mPipeline.depthImageView = createImageView(mPipeline.depthImage, depthFormat, VK_IMAGE_ASPECT_COLOR_BIT);
@@ -1808,19 +1809,19 @@ void VulkanRenderer::createTextureSampler()
 }
 
 
-void VulkanRenderer::createDescriptorPool()
+void VulkanRenderer::createDescriptorPool(PH_SwapChain* pSwapChain)
 {
 	tinystl::vector<VkDescriptorPoolSize> poolSizes(2);
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[0].descriptorCount = static_cast<uint32_t>(swapChainImages.size());
+	poolSizes[0].descriptorCount = static_cast<uint32_t>(pSwapChain->swapChainImages.size());
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[1].descriptorCount = static_cast<uint32_t>(swapChainImages.size());
+	poolSizes[1].descriptorCount = static_cast<uint32_t>(pSwapChain->swapChainImages.size());
 
 	VkDescriptorPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets = static_cast<uint32_t>(swapChainImages.size());
+	poolInfo.maxSets = static_cast<uint32_t>(pSwapChain->swapChainImages.size());
 
 	if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
 	{
@@ -1828,28 +1829,28 @@ void VulkanRenderer::createDescriptorPool()
 	}
 }
 
-void VulkanRenderer::createDescriptorSets()
+void VulkanRenderer::createDescriptorSets(PH_SwapChain* pSwapChain)
 {
-	tinystl::vector<VkDescriptorSetLayout> layouts(swapChainImages.size(), descriptorSetLayout);
+	tinystl::vector<VkDescriptorSetLayout> layouts(pSwapChain->swapChainImages.size(), descriptorSetLayout);
 	
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo.descriptorPool = descriptorPool;
-	allocInfo.descriptorSetCount = static_cast<uint32_t>(swapChainImages.size());
+	allocInfo.descriptorSetCount = static_cast<uint32_t>(pSwapChain->swapChainImages.size());
 	allocInfo.pSetLayouts = layouts.data();
 
-	descriptorSets.resize(swapChainImages.size());
+	descriptorSets.resize(pSwapChain->swapChainImages.size());
 	if (vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data()) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to allocate descriptor sets!");
 	}
 
-	for (size_t i = 0; i < swapChainImages.size(); i++)
+	for (size_t i = 0; i < pSwapChain->swapChainImages.size(); i++)
 	{
 		VkDescriptorBufferInfo bufferInfo = {};
-		bufferInfo.buffer = uniformBuffers[i];
-		bufferInfo.offset = 0;
-		bufferInfo.range = sizeof(UniformBufferObject);
+		bufferInfo.buffer = pSwapChain->bufferUpdateInfo.bufferInfo.buffer;
+		bufferInfo.offset = pSwapChain->bufferUpdateInfo.bufferInfo.offset;
+		bufferInfo.range  = pSwapChain->bufferUpdateInfo.bufferInfo.range;
 
 		VkDescriptorImageInfo imageInfo = {};
 		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;

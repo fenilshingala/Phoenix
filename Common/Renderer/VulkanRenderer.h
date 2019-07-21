@@ -51,6 +51,44 @@ private:
 	VkImageView depthImageView;
 };
 
+struct PH_BufferUpdateInfo
+{
+	VkDescriptorBufferInfo bufferInfo;
+	VkDescriptorImageInfo imageInfo;
+};
+
+struct PH_BufferDesc
+{
+	uint64_t			  mBufferSize;
+	VkBufferUsageFlags	  mUsage;
+	VkMemoryPropertyFlags mProperties;
+};
+
+struct PH_Buffer
+{
+	friend class VulkanRenderer;
+	tinystl::vector<VkBuffer>		mBuffers;
+	tinystl::vector<VkDeviceMemory> mBuffersMemory;
+	void*  data;
+	size_t size;
+	PH_BufferDesc bufferDesc;
+};
+
+struct PH_SwapChain
+{
+	friend class VulkanRenderer;
+	VkSwapchainKHR swapChain;
+	VkExtent2D swapChainExtent;
+	tinystl::vector<VkImage> swapChainImages;
+	PH_BufferUpdateInfo bufferUpdateInfo;
+
+private:
+	tinystl::vector<PH_Buffer*>  buffers;
+	tinystl::vector<VkImageView> swapChainImageViews;
+	VkFormat swapChainImageFormat;
+};
+
+
 class VulkanRenderer
 {
 public:
@@ -79,12 +117,19 @@ public:
 	// VULKAN
 	void enableDepth();
 	void initVulkan();
-	void createGraphicsPipeline(PH_Pipeline&, bool recreate=false);//
-	void initVulkan2();//
-	void createCommandBuffers(PH_Pipeline&);//
+	void addSwapChain(PH_SwapChain* swapchain);
+	void createGraphicsPipeline(PH_SwapChain* pSwapChain, PH_Pipeline&, bool recreate=false);//
+	void initVulkan2(PH_SwapChain* swapchain);//
+	void createCommandBuffers(PH_SwapChain&, PH_Pipeline&);//
 	void cleanupVulkan();
-	void drawFrame();
 	void waitDeviceIdle();
+
+	uint32_t acquireNextImage(PH_SwapChain* pSwapChain);
+	void drawFrame(PH_SwapChain*, uint32_t);
+
+	void createUniformBuffers(PH_SwapChain*, PH_Buffer*, bool recreate = false);
+	void updateUniformBuffer(uint32_t currentImage, PH_Buffer&);
+	void createDescriptorSets(PH_SwapChain*);
 
 private:
 	int WIDTH;
@@ -99,14 +144,16 @@ private:
 	GLFWwindow* window;
 
 	// VULKAN
-	void cleanupSwapChain();
-	void recreateSwapChain();
+	void cleanupSwapChain(PH_SwapChain*);
+	void recreateSwapChain(PH_SwapChain*);
 
 	void createInstance();
 	void pickPhysicalDevice();
 	void createLogicalDevice();
-	void createSwapChain();
-	void createImageViews();
+
+	void createSwapChain(PH_SwapChain* swapChain);
+	void createImageViews(PH_SwapChain* swapChain);
+
 	VkShaderModule createShaderModule(const tinystl::vector<char>& code);
 	void createRenderPass(PH_Pipeline&);//
 	void createDescriptorSetLayout();
@@ -117,8 +164,8 @@ private:
 	VkCommandBuffer beginSingleTimeCommands();
 	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 
-	void createDepthResources(PH_Pipeline&);//
-	void createFramebuffers(PH_Pipeline&);//
+	void createDepthResources(PH_SwapChain*, PH_Pipeline&);//
+	void createFramebuffers(PH_SwapChain*, PH_Pipeline&);//
 
 	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
@@ -126,8 +173,8 @@ private:
 
 	void createVertexBuffer(PH_Pipeline&);
 	void createIndexBuffer(PH_Pipeline&);
-	void createUniformBuffers();
-	void updateUniformBuffer(uint32_t currentImage);
+	/*void createUniformBuffers(PH_SwapChain*, PH_BufferDesc&, PH_Buffer&);
+	void updateUniformBuffer(uint32_t currentImage, PH_Buffer&);*/
 	
 	void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
 		VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
@@ -138,8 +185,7 @@ private:
 	void createTextureImageView();
 	void createTextureSampler();
 
-	void createDescriptorPool();
-	void createDescriptorSets();
+	void createDescriptorPool(PH_SwapChain*);
 
 	void destroyGraphicsPipeline(PH_Pipeline& mPipelineInfo);
 	void destroyInstance();
@@ -159,40 +205,29 @@ private:
 	
 	VkSurfaceKHR surface;
 	
-	VkSwapchainKHR swapChain;
-	tinystl::vector<VkImage> swapChainImages;
-	tinystl::vector<VkImageView> swapChainImageViews;
+	
+	tinystl::vector<PH_SwapChain*> swapChains;
+	//VkSwapchainKHR swapChain;
+	//tinystl::vector<VkImage> swapChainImages;
+	//tinystl::vector<VkImageView> swapChainImageViews;
 	VkFormat swapChainImageFormat;
-	VkExtent2D swapChainExtent;
+	//VkExtent2D swapChainExtent;
 	tinystl::vector<VkShaderModule> shaderModules;
-	//VkRenderPass renderPass;
 
 	VkDescriptorSetLayout descriptorSetLayout;
-	//VkPipelineLayout pipelineLayout;
-	//VkPipeline graphicsPipeline;
 
-	//PH_Pipeline graphicsPipeline; //
 	tinystl::vector<PH_Pipeline> mPipelines;//
 
-	//tinystl::vector<VkFramebuffer> swapChainFramebuffers;
 	VkCommandPool commandPool;
 	tinystl::vector<VkCommandBuffer> commandBuffers;
 
-	//VkBuffer vertexBuffer;
-	//VkDeviceMemory vertexBufferMemory;
-	//VkBuffer indexBuffer;
-	//VkDeviceMemory indexBufferMemory;
-	tinystl::vector<VkBuffer> uniformBuffers;
-	tinystl::vector<VkDeviceMemory> uniformBuffersMemory;
+	//tinystl::vector<VkBuffer> uniformBuffers;
+	//tinystl::vector<VkDeviceMemory> uniformBuffersMemory;
 
 	VkImage textureImage;
 	VkDeviceMemory textureImageMemory;
 	VkImageView textureImageView;
 	VkSampler textureSampler;
-
-	/*VkImage depthImage;
-	VkDeviceMemory depthImageMemory;
-	VkImageView depthImageView;*/
 
 	VkDescriptorPool descriptorPool;
 	tinystl::vector<VkDescriptorSet> descriptorSets;

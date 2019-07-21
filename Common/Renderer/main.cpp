@@ -1,5 +1,11 @@
 #include "VulkanRenderer.h"
+
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
+#include <chrono>
 
 struct Vertex
 {
@@ -48,6 +54,17 @@ struct Vertex
 tinystl::vector<Vertex> vertices;
 tinystl::vector<uint16_t> indices;
 
+PH_SwapChain swapchain;
+
+struct UniformBufferObject
+{
+	alignas(16) glm::mat4 model;
+	alignas(16) glm::mat4 view;
+	alignas(16) glm::mat4 proj;
+};
+
+PH_Buffer uniformBuffer;
+
 class Application
 {
 public:
@@ -71,6 +88,8 @@ public:
 		renderer.initWindow();
 		renderer.enableDepth();
 		renderer.initVulkan();
+
+		renderer.addSwapChain(&swapchain);
 
 		PH_Pipeline mPipeline;
 
@@ -97,7 +116,6 @@ public:
 		VkVertexInputBindingDescription bindingDescription = Vertex::getBindingDescription();
 		tinystl::vector<VkVertexInputAttributeDescription> attributeDescriptions = Vertex::getAttributeDescriptions();
 
-		mPipeline.mVertexInputState.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 		mPipeline.mVertexInputState.vertexBindingDescriptionCount = 1;
 		mPipeline.mVertexInputState.pVertexBindingDescriptions = &bindingDescription;
 		mPipeline.mVertexInputState.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
@@ -111,10 +129,24 @@ public:
 		mPipeline.mIndex.size  = sizeof(indices[0]) * indices.size();
 		mPipeline.mIndex.count = static_cast<uint32_t>(indices.size());
 
-		renderer.createGraphicsPipeline(mPipeline); //
+		renderer.createGraphicsPipeline(&swapchain, mPipeline); //
 
-		renderer.initVulkan2();
-		renderer.createCommandBuffers(mPipeline);
+		uniformBuffer.bufferDesc.mBufferSize = sizeof(UniformBufferObject);
+		uniformBuffer.bufferDesc.mUsage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+		uniformBuffer.bufferDesc.mProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+		renderer.createUniformBuffers(&swapchain, &uniformBuffer);
+		
+		for (size_t i = 0; i < swapchain.swapChainImages.size(); i++)
+		{
+			swapchain.bufferUpdateInfo.bufferInfo.buffer = uniformBuffer.mBuffers[i];
+			swapchain.bufferUpdateInfo.bufferInfo.offset = 0;
+			swapchain.bufferUpdateInfo.bufferInfo.range = sizeof(UniformBufferObject);
+		}
+
+		renderer.initVulkan2(&swapchain);
+
+		renderer.createCommandBuffers(swapchain, mPipeline);
 
 		while (!renderer.windowShouldClose() && !exit)
 		{
@@ -134,7 +166,30 @@ private:
 
 	void mainLoop()
 	{
-		renderer.drawFrame();
+		uint32_t imageIndex = renderer.acquireNextImage(&swapchain);
+		if (imageIndex == -1)
+			return;
+
+		//renderer.drawFrame(&swapchain);
+		// update uniform buffer
+		static std::chrono::time_point<std::chrono::steady_clock>	startTime = std::chrono::high_resolution_clock::now();
+
+		std::chrono::time_point<std::chrono::steady_clock>		  currentTime = std::chrono::high_resolution_clock::now();
+		float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+		UniformBufferObject ubo = {};
+		ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.proj = glm::perspective(glm::radians(45.0f), swapchain.swapChainExtent.width / (float)swapchain.swapChainExtent.height, 0.1f, 10.0f);
+		ubo.proj[1][1] *= -1;
+
+		uniformBuffer.data = &ubo;
+		uniformBuffer.size = sizeof(UniformBufferObject);
+
+		renderer.updateUniformBuffer(imageIndex, uniformBuffer);
+		//
+
+		renderer.drawFrame(&swapchain, imageIndex);
 
 		if (renderer.isKeyTriggered(PH_KEY_ESCAPE))
 		{
