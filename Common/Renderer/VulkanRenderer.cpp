@@ -124,11 +124,9 @@ void VulkanRenderer::addSwapChain(PH_SwapChain* swapchain)
 
 void VulkanRenderer::initVulkan2(PH_SwapChain* pSwapChain)
 {
-	//createUniformBuffers(pSwapChain);
-
-	createTextureImage();
-	createTextureImageView();
-	createTextureSampler();
+	//createTextureImage();
+	//createTextureImageView();
+	//createTextureSampler();
 
 	createDescriptorPool(pSwapChain);
 	createDescriptorSets(pSwapChain);
@@ -151,6 +149,11 @@ void VulkanRenderer::destroyGraphicsPipeline(PH_Pipeline& mPipeline)
 		vkDestroyImage(device, mPipeline.depthImage, nullptr);
 		vkFreeMemory(device, mPipeline.depthImageMemory, nullptr);
 	}
+}
+
+void VulkanRenderer::destroySampler(VkSampler* sampler)
+{
+	vkDestroySampler(device, *sampler, nullptr);
 }
 
 void VulkanRenderer::cleanupVulkan()
@@ -176,12 +179,6 @@ void VulkanRenderer::cleanupVulkan()
 
 	vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
 	
-	/*for (VkImageView imageView : swapChainImageViews)
-	{
-		vkDestroyImageView(device, imageView, nullptr);
-	}*/
-
-	//vkDestroySwapchainKHR(device, swapChain, nullptr);
 	for (PH_SwapChain* swapchain : swapChains)
 	{
 		for (VkImageView imageView : swapchain->swapChainImageViews)
@@ -211,11 +208,20 @@ void VulkanRenderer::cleanupVulkan()
 		}
 	}
 
-	vkDestroySampler(device, textureSampler, nullptr);
+	//vkDestroySampler(device, textureSampler, nullptr);
 
-	vkDestroyImageView(device, textureImageView, nullptr);
-	vkDestroyImage(device, textureImage, nullptr);
-	vkFreeMemory(device, textureImageMemory, nullptr);
+	for (PH_SwapChain* swapchain : swapChains)
+	{
+		for (size_t i = 0; i < swapchain->swapChainImages.size(); i++)
+		{
+			for (PH_Texture* texture : swapchain->textures)
+			{
+				vkDestroyImageView(device, texture->textureImageView, nullptr);
+				vkDestroyImage(device, texture->textureImage, nullptr);
+				vkFreeMemory(device, texture->textureImageMemory, nullptr);
+			}
+		}
+	}
 
 	vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 	
@@ -240,18 +246,8 @@ void VulkanRenderer::cleanupSwapChain(PH_SwapChain* pSwapChain)
 		vkDestroyImageView(device, pSwapChain->swapChainImageViews[i], nullptr);
 	}
 
-	//vkDestroySwapchainKHR(device, swapChain, nullptr);
 	vkDestroySwapchainKHR(device, pSwapChain->swapChain, nullptr);
 	
-
-	/*for (PH_SwapChain* swapchain : swapChains)
-	{
-		for (size_t i = 0; i < swapchain->swapChainImages.size(); i++)
-		{
-			vkDestroyBuffer(device, swapchain->buffers[i], nullptr);
-			vkFreeMemory(device, swapchain->buffers[i], nullptr);
-		}
-	}*/
 	for (PH_SwapChain* swapchain : swapChains)
 	{
 		for (size_t i = 0; i < swapchain->swapChainImages.size(); i++)
@@ -282,20 +278,11 @@ void VulkanRenderer::recreateSwapChain(PH_SwapChain* pSwapChain)
 
 	createSwapChain(pSwapChain);
 	createImageViews(pSwapChain);
-	//createRenderPass();
-	//createGraphicsPipeline();
 	for (PH_Pipeline& pipeline : mPipelines)
 	{
 		createGraphicsPipeline(pSwapChain, pipeline, true);
 	}
 
-	/*if (depthEnabled)
-	{
-		createDepthResources();
-	}*/
-
-	//createFramebuffers();
-	//createUniformBuffers(pSwapChain);
 	for (PH_Buffer* buffer : pSwapChain->buffers)
 	{
 		createUniformBuffers(pSwapChain, buffer, true);
@@ -1020,9 +1007,6 @@ void VulkanRenderer::createGraphicsPipeline(PH_SwapChain* pSwapChain, PH_Pipelin
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 	
-	//VkVertexInputBindingDescription bindingDescription						 = Vertex::getBindingDescription();
-	//tinystl::vector<VkVertexInputAttributeDescription> attributeDescriptions = Vertex::getAttributeDescriptions();
-	
 	vertexInputInfo.vertexBindingDescriptionCount = mPipeline.mVertexInputState.vertexBindingDescriptionCount;
 	vertexInputInfo.pVertexBindingDescriptions = mPipeline.mVertexInputState.pVertexBindingDescriptions;
 	vertexInputInfo.vertexAttributeDescriptionCount = mPipeline.mVertexInputState.vertexAttributeDescriptionCount;
@@ -1322,23 +1306,6 @@ uint32_t VulkanRenderer::acquireNextImage(PH_SwapChain* pSwapChain)
 
 void VulkanRenderer::drawFrame(PH_SwapChain* pSwapChain, uint32_t imageIndex)
 {
-	/*vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
-	
-	uint32_t imageIndex;
-	VkResult result = vkAcquireNextImageKHR(device, pSwapChain->swapChain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
-
-	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
-	{
-		recreateSwapChain(pSwapChain);
-		return;
-	}
-	else if (result != VK_SUCCESS)
-	{
-		throw std::runtime_error("failed to acquire swap chain image!");
-	}*/
-
-	//updateUniformBuffer(imageIndex);
-
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
@@ -1743,10 +1710,10 @@ void VulkanRenderer::createDepthResources(PH_SwapChain* pSwapChain, PH_Pipeline&
 	transitionImageLayout(mPipeline.depthImage, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
-void VulkanRenderer::createTextureImage()
+void VulkanRenderer::createTextureImage(PH_Texture* pTexture)
 {
 	int texWidth, texHeight, texChannels;
-	stbi_uc* pixels = stbi_load("../../Phoenix/App/Test/textures/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+	stbi_uc* pixels = stbi_load(pTexture->filename, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 	VkDeviceSize imageSize = texWidth * texHeight * 4;
 
 	if (!pixels)
@@ -1767,22 +1734,24 @@ void VulkanRenderer::createTextureImage()
 	stbi_image_free(pixels);
 
 	createImage(texWidth, texHeight, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory);
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, pTexture->textureImage, pTexture->textureImageMemory);
 
-	transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-	copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
-	transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	transitionImageLayout(pTexture->textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+	copyBufferToImage(stagingBuffer, pTexture->textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+	transitionImageLayout(pTexture->textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	vkDestroyBuffer(device, stagingBuffer, nullptr);
 	vkFreeMemory(device, stagingBufferMemory, nullptr);
+
+	createTextureImageView(pTexture);
 }
 
-void VulkanRenderer::createTextureImageView()
+void VulkanRenderer::createTextureImageView(PH_Texture* pTexture)
 {
-	textureImageView = createImageView(textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
+	pTexture->textureImageView = createImageView(pTexture->textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
-void VulkanRenderer::createTextureSampler()
+void VulkanRenderer::createTextureSampler(VkSampler* textureSampler)
 {
 	VkSamplerCreateInfo samplerInfo = {};
 	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -1802,7 +1771,7 @@ void VulkanRenderer::createTextureSampler()
 	samplerInfo.minLod = 0.0f;
 	samplerInfo.maxLod = 0.0f;
 
-	if (vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS)
+	if (vkCreateSampler(device, &samplerInfo, nullptr, textureSampler) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to create texture sampler!");
 	}
@@ -1853,9 +1822,9 @@ void VulkanRenderer::createDescriptorSets(PH_SwapChain* pSwapChain)
 		bufferInfo.range  = pSwapChain->bufferUpdateInfo.bufferInfo.range;
 
 		VkDescriptorImageInfo imageInfo = {};
-		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo.imageView = textureImageView;
-		imageInfo.sampler = textureSampler;
+		imageInfo.imageLayout = pSwapChain->textureUpdateInfo.imageInfo.imageLayout;
+		imageInfo.imageView   = pSwapChain->textureUpdateInfo.imageInfo.imageView;
+		imageInfo.sampler	  = pSwapChain->textureUpdateInfo.imageInfo.sampler;
 
 		tinystl::vector<VkWriteDescriptorSet> descriptorWrites(2);
 		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

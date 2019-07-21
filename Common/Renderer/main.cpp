@@ -63,7 +63,9 @@ struct UniformBufferObject
 	alignas(16) glm::mat4 proj;
 };
 
-PH_Buffer uniformBuffer;
+PH_Buffer  uniformBuffer;
+PH_Texture texture;
+VkSampler textureSampler;
 
 class Application
 {
@@ -131,6 +133,7 @@ public:
 
 		renderer.createGraphicsPipeline(&swapchain, mPipeline); //
 
+		// UNIFORM
 		uniformBuffer.bufferDesc.mBufferSize = sizeof(UniformBufferObject);
 		uniformBuffer.bufferDesc.mUsage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 		uniformBuffer.bufferDesc.mProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
@@ -143,6 +146,17 @@ public:
 			swapchain.bufferUpdateInfo.bufferInfo.offset = 0;
 			swapchain.bufferUpdateInfo.bufferInfo.range = sizeof(UniformBufferObject);
 		}
+
+		// TEXTURE
+		texture.filename = "../../Phoenix/App/Test/textures/texture.jpg";
+
+		swapchain.textureUpdateInfo.imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		
+		renderer.createTextureImage(&texture);
+		swapchain.textureUpdateInfo.imageInfo.imageView = texture.textureImageView;
+		
+		renderer.createTextureSampler(&textureSampler);
+		swapchain.textureUpdateInfo.imageInfo.sampler = textureSampler;
 
 		renderer.initVulkan2(&swapchain);
 
@@ -158,6 +172,7 @@ public:
 		}
 
 		renderer.waitDeviceIdle();
+		renderer.destroySampler(&textureSampler);
 		renderer.cleanupVulkan();
 		renderer.destroyWindow();
 	}

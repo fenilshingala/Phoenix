@@ -54,7 +54,6 @@ private:
 struct PH_BufferUpdateInfo
 {
 	VkDescriptorBufferInfo bufferInfo;
-	VkDescriptorImageInfo imageInfo;
 };
 
 struct PH_BufferDesc
@@ -74,16 +73,34 @@ struct PH_Buffer
 	PH_BufferDesc bufferDesc;
 };
 
+struct PH_TextureUpdateInfo
+{
+	VkDescriptorImageInfo imageInfo;
+};
+
+struct PH_Texture
+{
+	friend class VulkanRenderer;
+	const char*	   filename;
+	VkImage		   textureImage;
+	VkDeviceMemory textureImageMemory;
+	VkImageView	   textureImageView;
+};
+
 struct PH_SwapChain
 {
 	friend class VulkanRenderer;
-	VkSwapchainKHR swapChain;
-	VkExtent2D swapChainExtent;
+
+	VkSwapchainKHR			 swapChain;
+	VkExtent2D				 swapChainExtent;
 	tinystl::vector<VkImage> swapChainImages;
-	PH_BufferUpdateInfo bufferUpdateInfo;
+
+	PH_BufferUpdateInfo	 bufferUpdateInfo;
+	PH_TextureUpdateInfo textureUpdateInfo;
 
 private:
 	tinystl::vector<PH_Buffer*>  buffers;
+	tinystl::vector<PH_Texture*> textures;
 	tinystl::vector<VkImageView> swapChainImageViews;
 	VkFormat swapChainImageFormat;
 };
@@ -129,6 +146,11 @@ public:
 
 	void createUniformBuffers(PH_SwapChain*, PH_Buffer*, bool recreate = false);
 	void updateUniformBuffer(uint32_t currentImage, PH_Buffer&);
+
+	void createTextureImage(PH_Texture*);
+	void createTextureSampler(VkSampler* textureSampler);
+	void destroySampler(VkSampler* sampler);
+
 	void createDescriptorSets(PH_SwapChain*);
 
 private:
@@ -181,9 +203,7 @@ private:
 	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 
-	void createTextureImage();
-	void createTextureImageView();
-	void createTextureSampler();
+	void createTextureImageView(PH_Texture*);
 
 	void createDescriptorPool(PH_SwapChain*);
 
@@ -224,10 +244,10 @@ private:
 	//tinystl::vector<VkBuffer> uniformBuffers;
 	//tinystl::vector<VkDeviceMemory> uniformBuffersMemory;
 
-	VkImage textureImage;
+	/*VkImage textureImage;
 	VkDeviceMemory textureImageMemory;
-	VkImageView textureImageView;
-	VkSampler textureSampler;
+	VkImageView textureImageView;*/
+	//VkSampler textureSampler;
 
 	VkDescriptorPool descriptorPool;
 	tinystl::vector<VkDescriptorSet> descriptorSets;
