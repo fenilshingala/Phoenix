@@ -1,12 +1,120 @@
 #include "VulkanRenderer.h"
+#include <glm/glm.hpp>
+
+struct Vertex
+{
+	glm::vec3 pos;
+	glm::vec3 color;
+	glm::vec2 texCoord;
+
+	Vertex(glm::vec3 _pos, glm::vec3 _color, glm::vec2 _texCoord)
+	{
+		pos = _pos; color = _color; texCoord = _texCoord;
+	}
+
+	static VkVertexInputBindingDescription getBindingDescription()
+	{
+		VkVertexInputBindingDescription bindingDescription = {};
+		bindingDescription.binding = 0;
+		bindingDescription.stride = sizeof(Vertex);
+		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+		return bindingDescription;
+	}
+
+	static tinystl::vector<VkVertexInputAttributeDescription> getAttributeDescriptions()
+	{
+		tinystl::vector<VkVertexInputAttributeDescription> attributeDescriptions(3);
+
+		attributeDescriptions[0].binding = 0;
+		attributeDescriptions[0].location = 0;
+		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[0].offset = offsetof(Vertex, pos);
+
+		attributeDescriptions[1].binding = 0;
+		attributeDescriptions[1].location = 1;
+		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[1].offset = offsetof(Vertex, color);
+
+		attributeDescriptions[2].binding = 0;
+		attributeDescriptions[2].location = 2;
+		attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
+
+		return attributeDescriptions;
+	}
+};
+
+tinystl::vector<Vertex> vertices;
+tinystl::vector<uint16_t> indices;
 
 class Application
 {
 public:
+	Application()
+	{
+		vertices.emplace_back(Vertex(glm::vec3(-0.5f, -0.5f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec2(1.0f, 0.0f)));
+		vertices.emplace_back(Vertex(glm::vec3(0.5f, -0.5f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 0.0f)));
+		vertices.emplace_back(Vertex(glm::vec3(0.5f, 0.5f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 1.0f)));
+		vertices.emplace_back(Vertex(glm::vec3(-0.5f, 0.5f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f)));
+
+		vertices.emplace_back(Vertex(glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec2(1.0f, 0.0f)));
+		vertices.emplace_back(Vertex(glm::vec3(0.5f, -0.5f, -0.5f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 0.0f)));
+		vertices.emplace_back(Vertex(glm::vec3(0.5f, 0.5f, -0.5f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 1.0f)));
+		vertices.emplace_back(Vertex(glm::vec3(-0.5f, 0.5f, -0.5f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f)));
+
+		indices.emplace_back(0);  indices.emplace_back(1);  indices.emplace_back(2);  indices.emplace_back(2);  indices.emplace_back(3);  indices.emplace_back(0);
+		indices.emplace_back(4);  indices.emplace_back(5);  indices.emplace_back(6);  indices.emplace_back(6);  indices.emplace_back(7);  indices.emplace_back(4);
+	}
+
 	void run() {
 		renderer.initWindow();
 		renderer.enableDepth();
 		renderer.initVulkan();
+
+		PH_Pipeline mPipeline;
+
+		// color
+		mPipeline.mColorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		mPipeline.mColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		mPipeline.mColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		mPipeline.mColorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		mPipeline.mColorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		mPipeline.mColorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		mPipeline.mColorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+		// depth
+		mPipeline.mDepthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		mPipeline.mDepthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		mPipeline.mDepthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		mPipeline.mDepthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		mPipeline.mDepthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		mPipeline.mDepthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		mPipeline.mDepthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+
+		// vertex bindings
+		VkVertexInputBindingDescription bindingDescription = Vertex::getBindingDescription();
+		tinystl::vector<VkVertexInputAttributeDescription> attributeDescriptions = Vertex::getAttributeDescriptions();
+
+		mPipeline.mVertexInputState.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+		mPipeline.mVertexInputState.vertexBindingDescriptionCount = 1;
+		mPipeline.mVertexInputState.pVertexBindingDescriptions = &bindingDescription;
+		mPipeline.mVertexInputState.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+		mPipeline.mVertexInputState.pVertexAttributeDescriptions = attributeDescriptions.data();
+
+		mPipeline.mVertex.data  = vertices.data();
+		mPipeline.mVertex.size  = sizeof(vertices[0]) * vertices.size();
+		mPipeline.mVertex.count = static_cast<uint32_t>(vertices.size());
+		
+		mPipeline.mIndex.data  = indices.data();
+		mPipeline.mIndex.size  = sizeof(indices[0]) * indices.size();
+		mPipeline.mIndex.count = static_cast<uint32_t>(indices.size());
+
+		renderer.createGraphicsPipeline(mPipeline); //
+
+		renderer.initVulkan2();
+		renderer.createCommandBuffers(mPipeline);
 
 		while (!renderer.windowShouldClose() && !exit)
 		{

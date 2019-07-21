@@ -13,6 +13,44 @@ struct GLFWwindow;
 typedef void(keyCallBackSignature)(GLFWwindow*, int, int, int, int);
 typedef void(resizeCallBackSignature)(GLFWwindow*, int, int);
 
+struct VertexData
+{
+	uint64_t size;
+	void*	 data;
+	uint32_t count;
+};
+
+struct IndexData
+{
+	uint64_t size;
+	void*	 data;
+	uint32_t count;
+};
+
+struct PH_Pipeline
+{
+	friend class VulkanRenderer;
+	VkAttachmentDescription mColorAttachment;
+	VkAttachmentDescription mDepthAttachment;
+	VkPipelineVertexInputStateCreateInfo mVertexInputState;
+	VertexData mVertex;
+	IndexData  mIndex;
+
+private:
+	VkRenderPass renderPass;
+	VkPipelineLayout pipelineLayout;
+	VkPipeline mPipeline;
+	tinystl::vector<VkFramebuffer> mFramebuffers;
+
+	VkBuffer vertexBuffer;
+	VkDeviceMemory vertexBufferMemory;
+	VkBuffer indexBuffer;
+	VkDeviceMemory indexBufferMemory;
+	VkImage depthImage;
+	VkDeviceMemory depthImageMemory;
+	VkImageView depthImageView;
+};
+
 class VulkanRenderer
 {
 public:
@@ -41,6 +79,9 @@ public:
 	// VULKAN
 	void enableDepth();
 	void initVulkan();
+	void createGraphicsPipeline(PH_Pipeline&, bool recreate=false);//
+	void initVulkan2();//
+	void createCommandBuffers(PH_Pipeline&);//
 	void cleanupVulkan();
 	void drawFrame();
 	void waitDeviceIdle();
@@ -67,25 +108,24 @@ private:
 	void createSwapChain();
 	void createImageViews();
 	VkShaderModule createShaderModule(const tinystl::vector<char>& code);
-	void createRenderPass();
+	void createRenderPass(PH_Pipeline&);//
 	void createDescriptorSetLayout();
-	void createGraphicsPipeline();
 	void createCommandPool();
-	void createCommandBuffers();
+	//void createCommandBuffers(PipelineInfo&);
 	void createSyncObjects();
 
 	VkCommandBuffer beginSingleTimeCommands();
 	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 
-	void createDepthResources();
-	void createFramebuffers();
+	void createDepthResources(PH_Pipeline&);//
+	void createFramebuffers(PH_Pipeline&);//
 
 	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
-	void createVertexBuffer();
-	void createIndexBuffer();
+	void createVertexBuffer(PH_Pipeline&);
+	void createIndexBuffer(PH_Pipeline&);
 	void createUniformBuffers();
 	void updateUniformBuffer(uint32_t currentImage);
 	
@@ -101,6 +141,7 @@ private:
 	void createDescriptorPool();
 	void createDescriptorSets();
 
+	void destroyGraphicsPipeline(PH_Pipeline& mPipelineInfo);
 	void destroyInstance();
 
 	bool checkValidationLayerSupport();
@@ -124,20 +165,23 @@ private:
 	VkFormat swapChainImageFormat;
 	VkExtent2D swapChainExtent;
 	tinystl::vector<VkShaderModule> shaderModules;
-	VkRenderPass renderPass;
+	//VkRenderPass renderPass;
 
 	VkDescriptorSetLayout descriptorSetLayout;
-	VkPipelineLayout pipelineLayout;
-	VkPipeline graphicsPipeline;
+	//VkPipelineLayout pipelineLayout;
+	//VkPipeline graphicsPipeline;
 
-	tinystl::vector<VkFramebuffer> swapChainFramebuffers;
+	//PH_Pipeline graphicsPipeline; //
+	tinystl::vector<PH_Pipeline> mPipelines;//
+
+	//tinystl::vector<VkFramebuffer> swapChainFramebuffers;
 	VkCommandPool commandPool;
 	tinystl::vector<VkCommandBuffer> commandBuffers;
 
-	VkBuffer vertexBuffer;
-	VkDeviceMemory vertexBufferMemory;
-	VkBuffer indexBuffer;
-	VkDeviceMemory indexBufferMemory;
+	//VkBuffer vertexBuffer;
+	//VkDeviceMemory vertexBufferMemory;
+	//VkBuffer indexBuffer;
+	//VkDeviceMemory indexBufferMemory;
 	tinystl::vector<VkBuffer> uniformBuffers;
 	tinystl::vector<VkDeviceMemory> uniformBuffersMemory;
 
@@ -146,9 +190,9 @@ private:
 	VkImageView textureImageView;
 	VkSampler textureSampler;
 
-	VkImage depthImage;
+	/*VkImage depthImage;
 	VkDeviceMemory depthImageMemory;
-	VkImageView depthImageView;
+	VkImageView depthImageView;*/
 
 	VkDescriptorPool descriptorPool;
 	tinystl::vector<VkDescriptorSet> descriptorSets;
