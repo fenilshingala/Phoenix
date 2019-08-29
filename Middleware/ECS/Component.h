@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../../Common/Thirdparty/stl/TINYSTL/hash.h"
-#include "../../Common/Thirdparty/stl/TINYSTL/string.h"
-#include "../../Common/Thirdparty/stl/TINYSTL/vector.h"
-#include "../../Common/Thirdparty/stl/TINYSTL/unordered_map.h"
+#include <TINYSTL/hash.h>
+#include <TINYSTL/string.h>
+#include <TINYSTL/vector.h>
+#include <TINYSTL/unordered_map.h>
 
 typedef unsigned int uint32;
 

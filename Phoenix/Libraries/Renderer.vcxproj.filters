@@ -26,5 +26,8 @@
     <ClInclude Include="..\..\Common\Renderer\VulkanRenderer.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Common\Renderer\keyBindings.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

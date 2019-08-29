@@ -1,18 +1,23 @@
 #include "VulkanRenderer.h"
 
-class HelloTriangleApplication
+class Application
 {
 public:
 	void run() {
-		renderer.initWindow(1440, 900);
+		renderer.initWindow();
+		renderer.enableDepth();
 		renderer.initVulkan();
 
-		while (!renderer.windowShouldClose()) {
+		while (!renderer.windowShouldClose() && !exit)
+		{
+			renderer.updateInputs();
+
 			mainLoop();
 
 			renderer.pollEvents();
 		}
 
+		renderer.waitDeviceIdle();
 		renderer.cleanupVulkan();
 		renderer.destroyWindow();
 	}
@@ -21,15 +26,21 @@ private:
 
 	void mainLoop()
 	{
-		// api sepcific updates
+		renderer.drawFrame();
+
+		if (renderer.isKeyTriggered(PH_KEY_ESCAPE))
+		{
+			exit = true;
+		}
 	}
 
+	bool exit = false;
 	VulkanRenderer renderer;
 };
 
 int main()
 {
-	HelloTriangleApplication app;
+	Application app;
 	try {
 		app.run();
 	}
