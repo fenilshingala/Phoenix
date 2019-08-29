@@ -147,9 +147,9 @@ void VulkanRenderer::createInstance()
 	createInfo.ppEnabledLayerNames = validationLayers.data();
 
 	// debug messenger
-	VkDebugUtilsMessengerCreateInfoEXT preDebugCreateInfo;
-	populateDebugMessengerCreateInfo(preDebugCreateInfo);
-	createInfo.pNext = &preDebugCreateInfo;
+	//VkDebugUtilsMessengerCreateInfoEXT preDebugCreateInfo;
+	//populateDebugMessengerCreateInfo(preDebugCreateInfo);
+	//createInfo.pNext = &preDebugCreateInfo;
 #else
 		createInfo.enabledLayerCount = 0;
 		createInfo.pNext = nullptr;
