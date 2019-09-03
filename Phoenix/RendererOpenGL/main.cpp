@@ -159,14 +159,19 @@ int main()
 	glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)renderer.windowWidth() / (float)renderer.windowHeight(), 0.1f, 100.0f);
 	shaderProgram.SetUniform("projection", &projection);*/
 
+	renderer.initGui();
+
 	while (!renderer.windowShouldClose() && !exitOnESC)
 	{
+
 		float currentFrame = (float)glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		renderer.perFrame();
 
 		// draw our first triangle
 		glUseProgram(lightingShader.mId);

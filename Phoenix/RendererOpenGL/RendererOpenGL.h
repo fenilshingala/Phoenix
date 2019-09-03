@@ -119,6 +119,10 @@ public:
 	// OPENGL
 	uint32_t LoadTexture(const char*);
 
+	// GUI
+	void initGui();
+	void perFrame();
+
 private:
 	GLFWwindow* window;
 

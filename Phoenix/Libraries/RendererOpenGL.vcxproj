@@ -20,10 +20,25 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Common\Thirdparty\glad\src\glad.c" />
+    <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui.cpp" />
+    <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui_demo.cpp" />
+    <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui_widgets.cpp" />
     <ClCompile Include="..\RendererOpenGL\main.cpp" />
     <ClCompile Include="..\RendererOpenGL\RendererOpenGL.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\Common\Thirdparty\imgui\examples\libs\gl3w\GL\glcorearb.h" />
+    <ClInclude Include="..\..\Common\Thirdparty\imgui\imconfig.h" />
+    <ClInclude Include="..\..\Common\Thirdparty\imgui\imgui.h" />
+    <ClInclude Include="..\..\Common\Thirdparty\imgui\imgui_impl_glfw.h" />
+    <ClInclude Include="..\..\Common\Thirdparty\imgui\imgui_impl_opengl3.h" />
+    <ClInclude Include="..\..\Common\Thirdparty\imgui\imgui_internal.h" />
+    <ClInclude Include="..\..\Common\Thirdparty\imgui\imstb_rectpack.h" />
+    <ClInclude Include="..\..\Common\Thirdparty\imgui\imstb_textedit.h" />
+    <ClInclude Include="..\..\Common\Thirdparty\imgui\imstb_truetype.h" />
     <ClInclude Include="..\RendererOpenGL\RendererOpenGL.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -91,7 +106,7 @@
     <IntDir>$(SolutionDir)$(Configuration)\Intermediates\$(ProjectName)\$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
     <LibraryPath>$(SolutionDir)..\Common\Thirdparty\glfw-3.3\lib-vc2017\$(Platform)\$(Configuration)\;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
-    <IncludePath>$(SolutionDir)..\Common\Thirdparty\;$(SolutionDir)..\Common\Thirdparty\glad\include;$(SolutionDir)..\Common\Thirdparty\glfw-3.3\include\;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>$(SolutionDir)..\Common\Thirdparty\imgui\examples\libs\gl3w;$(SolutionDir)..\Common\Thirdparty\;$(SolutionDir)..\Common\Thirdparty\glad\include;$(SolutionDir)..\Common\Thirdparty\glfw-3.3\include\;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IntDir>$(SolutionDir)$(Configuration)\Intermediates\$(ProjectName)\$(Configuration)\</IntDir>
