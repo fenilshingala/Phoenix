@@ -163,7 +163,6 @@ int main()
 
 	while (!renderer.windowShouldClose() && !exitOnESC)
 	{
-
 		float currentFrame = (float)glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
@@ -171,7 +170,18 @@ int main()
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		renderer.perFrame();
+		// GUI
+		{
+			renderer.initGuiFrame();
+
+			ImVec4 clear_color = ImVec4(0.1f, 0.0f, 0.0f, 1.00f);
+
+			bool truebool = true;
+			ImGui::Begin("Hello There!", &truebool);
+			ImGui::End();
+
+			renderer.endGuiFrame();
+		}
 
 		// draw our first triangle
 		glUseProgram(lightingShader.mId);

@@ -8,10 +8,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-#include <imgui/imgui.h>
-#include <imgui/imgui_impl_glfw.h>
-#include <imgui/imgui_impl_opengl3.h>
-
 #include <iostream>
 
 ////////////////////////////////////////////////
@@ -509,7 +505,7 @@ uint32_t OpenGLRenderer::LoadTexture(const char* path)
 	return texture;
 }
 
-void OpenGLRenderer::initGui()
+void OpenGLRenderer::initGuiFrame()
 {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -519,24 +515,18 @@ void OpenGLRenderer::initGui()
 
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 130");
-
-	
 }
 
-void OpenGLRenderer::perFrame()
+void OpenGLRenderer::beginGuiFrame()
 {
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
+}
 
-	ImVec4 clear_color = ImVec4(0.1f, 0.0f, 0.0f, 1.00f);
-
-	bool truebool = true;
-	ImGui::Begin("Hello There!", &truebool);
-	ImGui::End();
-
+void OpenGLRenderer::endGuiFrame()
+{
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
 	ImGui::EndFrame();
 }

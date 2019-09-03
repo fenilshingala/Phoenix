@@ -14,6 +14,10 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include <imgui/imgui.h>
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_opengl3.h>
+
 struct Uniform
 {
 	uint16_t location;
@@ -120,8 +124,9 @@ public:
 	uint32_t LoadTexture(const char*);
 
 	// GUI
-	void initGui();
-	void perFrame();
+	void initGuiFrame();
+	void beginGuiFrame();
+	void endGuiFrame();
 
 private:
 	GLFWwindow* window;
