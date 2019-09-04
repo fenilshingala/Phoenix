@@ -5,7 +5,7 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include "../../Common/Thirdparty/TINYSTL/string.h"
+#include "../../Common/Thirdparty/TINYSTL/vector.h"
 #include "../../Common/Renderer/keyBindings.h"
 
 #define GLM_FORCE_RADIANS
@@ -18,6 +18,10 @@
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
 
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+
 struct Uniform
 {
 	uint16_t location;
@@ -27,7 +31,7 @@ struct Uniform
 class ShaderProgram
 {
 public:
-	ShaderProgram(tinystl::string vertexShaderPath, tinystl::string fragmentShaderPath);
+	ShaderProgram(std::string vertexShaderPath, std::string fragmentShaderPath);
 	~ShaderProgram();
 
 	void SetUniform(const char*, void*);
@@ -35,6 +39,93 @@ public:
 	int mId;
 	std::unordered_map<size_t, Uniform> mUniformVarMap;
 };
+
+/////////////////////
+// MESH
+
+struct Vertex
+{
+	// position
+	glm::vec3 Position;
+	// normal
+	glm::vec3 Normal;
+	// texCoords
+	glm::vec2 TexCoords;
+	// tangent
+	glm::vec3 Tangent;
+	// bitangent
+	glm::vec3 Bitangent;
+};
+
+struct Texture
+{
+	unsigned int id;
+	std::string type;
+	std::string path;
+};
+
+class Mesh {
+public:
+	/*  Mesh Data  */
+	tinystl::vector<Vertex> vertices;
+	tinystl::vector<unsigned int> indices;
+	tinystl::vector<Texture> textures;
+	unsigned int VAO;
+
+	/*  Functions  */
+	// constructor
+	Mesh(tinystl::vector<Vertex> vertices, tinystl::vector<unsigned int> indices, tinystl::vector<Texture> textures);
+
+	// render the mesh
+	void Draw(ShaderProgram shader);
+
+private:
+	/*  Render data  */
+	unsigned int VBO, EBO;
+
+	/*  Functions    */
+	// initializes all the buffer objects/arrays
+	void SetupMesh();
+};
+
+
+/////////////////////
+// MODEL
+
+class Model
+{
+public:
+	/*  Model Data */
+	tinystl::vector<Texture> textures_loaded;	// stores all the textures loaded so far, optimization to make sure textures aren't loaded more than once.
+	tinystl::vector<Mesh> meshes;
+	std::string directory;
+	bool gammaCorrection;
+
+	/*  Functions   */
+	// constructor, expects a filepath to a 3D model.
+	Model(std::string const &path, bool gamma = false);
+
+	// draws the model, and thus all its meshes
+	void Draw(ShaderProgram shader);
+
+private:
+	/*  Functions   */
+	// loads a model with supported ASSIMP extensions from file and stores the resulting meshes in the meshes vector.
+	void loadModel(std::string const &path);
+
+	// processes a node in a recursive fashion. Processes each individual mesh located at the node and repeats this process on its children nodes (if any).
+	void processNode(aiNode *node, const aiScene *scene);
+
+	Mesh processMesh(aiMesh *mesh, const aiScene *scene);
+
+	// checks all material textures of a given type and loads the textures if they're not loaded yet.
+	// the required info is returned as a Texture struct.
+	tinystl::vector<Texture> loadMaterialTextures(aiMaterial *mat, aiTextureType type, std::string typeName);
+};
+
+
+/////////////////////
+// CAMERA
 
 enum Camera_Movement
 {
@@ -90,6 +181,8 @@ private:
 	void updateCameraVectors();
 };
 
+uint32_t LoadTexture(const char*);
+
 class OpenGLRenderer
 {
 public:
@@ -120,11 +213,9 @@ public:
 	bool isMouseLeftPressed();
 	bool isMouseRightPressed();
 
-	// OPENGL
-	uint32_t LoadTexture(const char*);
-
 	// GUI
 	void initGui();
+	void exitGui();
 	void beginGuiFrame();
 	void endGuiFrame();
 

@@ -219,12 +219,13 @@ int main()
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 		renderer.swapwindow();
-
 		renderer.pollEvents();
 		renderer.updateInputs();
 
 		processInputs();
 	}
+
+	renderer.exitGui();
 
 	glDeleteVertexArrays(1, &cubeVAO);
 	glDeleteVertexArrays(1, &lightVAO);
