@@ -8,8 +8,12 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-#include <iostream>
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
+#include <iostream>
+	
 ////////////////////////////////////////////////
 // WINDOW
 
@@ -505,7 +509,7 @@ uint32_t OpenGLRenderer::LoadTexture(const char* path)
 	return texture;
 }
 
-void OpenGLRenderer::initGuiFrame()
+void OpenGLRenderer::initGui()
 {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -515,6 +519,9 @@ void OpenGLRenderer::initGuiFrame()
 
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 130");
+
+	Assimp::Importer importer;
+	const aiScene *scene = importer.ReadFile("", aiProcess_Triangulate | aiProcess_FlipUVs);
 }
 
 void OpenGLRenderer::beginGuiFrame()

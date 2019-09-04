@@ -172,7 +172,7 @@ int main()
 
 		// GUI
 		{
-			renderer.initGuiFrame();
+			renderer.beginGuiFrame();
 
 			ImVec4 clear_color = ImVec4(0.1f, 0.0f, 0.0f, 1.00f);
 

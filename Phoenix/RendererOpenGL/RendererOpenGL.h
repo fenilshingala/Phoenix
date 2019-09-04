@@ -124,7 +124,7 @@ public:
 	uint32_t LoadTexture(const char*);
 
 	// GUI
-	void initGuiFrame();
+	void initGui();
 	void beginGuiFrame();
 	void endGuiFrame();
 
