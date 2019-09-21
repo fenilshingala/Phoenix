@@ -42,7 +42,10 @@
     <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui_impl_opengl3.cpp">
       <Filter>Source Files\ImGui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui_impl_glfw.cpp">
+    <ClCompile Include="..\RendererOpenGL\Window.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui_impl_sdl.cpp">
       <Filter>Source Files\ImGui</Filter>
     </ClCompile>
   </ItemGroup>
@@ -74,7 +77,10 @@
     <ClInclude Include="..\..\Common\Thirdparty\imgui\examples\libs\gl3w\GL\glcorearb.h">
       <Filter>Source Files\ImGui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Thirdparty\imgui\imgui_impl_glfw.h">
+    <ClInclude Include="..\RendererOpenGL\Window.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Thirdparty\imgui\imgui_impl_sdl.h">
       <Filter>Source Files\ImGui</Filter>
     </ClInclude>
   </ItemGroup>

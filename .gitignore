@@ -1,5 +1,6 @@
-Phoenix/.vs
-Phoenix/Debug/
-Phoenix/Release/
-Phoenix/x64/
-SpirV/
+/Phoenix/.vs
+/Phoenix/Debug/
+/Phoenix/Release/
+/Phoenix/x64/
+/SpirV/
+/Phoenix/Libraries/imgui.ini

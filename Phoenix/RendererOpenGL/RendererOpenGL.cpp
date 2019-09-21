@@ -9,148 +9,6 @@
 #include <stb_image.h>
 
 #include <iostream>
-	
-////////////////////////////////////////////////
-// WINDOW
-
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{	glViewport(0, 0, width, height);	}
-
-#define NUM_OF_KEY_BINDINGS PH_KEY_MAX
-uint32_t keyPressBindings[NUM_OF_KEY_BINDINGS] = { 0 };
-uint32_t prevKeyPressBindings[NUM_OF_KEY_BINDINGS] = { 0 };
-uint32_t currKeyPressBindings[NUM_OF_KEY_BINDINGS] = { 0 };
-
-uint32_t keyReleaseBindings[NUM_OF_KEY_BINDINGS] = { 0 };
-uint32_t prevKeyReleaseBindings[NUM_OF_KEY_BINDINGS] = { 0 };
-uint32_t currKeyReleaseBindings[NUM_OF_KEY_BINDINGS] = { 0 };
-bool keysUpdated = false;
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-	if (key >= NUM_OF_KEY_BINDINGS)
-		return;
-	if (action == GLFW_PRESS || action == GLFW_REPEAT)
-		keyPressBindings[key] = 1;
-	if (action == GLFW_RELEASE)
-		keyReleaseBindings[key] = 1;
-}
-
-float mousePosX = 0.0f, mousePosY = 0.0f;
-void mouse_callback(GLFWwindow* window, double xpos, double ypos)
-{
-	mousePosX = (float)xpos; mousePosY = (float)ypos;
-}
-
-float scrollXOffset = 0.0f, scrollYOffset = 0.0f;
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
-{
-	scrollXOffset = (float)xoffset;
-	scrollYOffset = (float)yoffset;
-}
-
-bool mouseLeft = false, mouseRight = false;
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
-{
-	if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS)
-		mouseRight = true;
-	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
-		mouseLeft = true;
-
-	if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE && mouseRight)
-		mouseRight = false;
-	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE && mouseLeft)
-		mouseLeft = false;
-}
-
-void OpenGLRenderer::initWindow(int _WIDTH, int _HEIGHT)
-{
-	WIDTH = _WIDTH;		HEIGHT = _HEIGHT;
-	glfwInit();
-
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-	window = glfwCreateWindow(WIDTH, HEIGHT, "Renderer", nullptr, nullptr);
-
-	glfwMakeContextCurrent(window);
-	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-	glfwSetKeyCallback(window, key_callback);
-	glfwSetCursorPosCallback(window, mouse_callback);
-	glfwSetScrollCallback(window, scroll_callback);
-	glfwSetMouseButtonCallback(window, mouse_button_callback);
-
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-
-	assert(gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)); // Failed to initialize GLAD
-}
-
-void OpenGLRenderer::pollEvents() {	glfwPollEvents(); }
-void OpenGLRenderer::waitEvents() { glfwWaitEvents(); }
-int OpenGLRenderer::windowShouldClose() {	return glfwWindowShouldClose(window);	}
-void OpenGLRenderer::destroyWindow()	{	glfwDestroyWindow(window);  glfwTerminate();	}
-
-void OpenGLRenderer::updateInputs()
-{
-	memcpy(prevKeyPressBindings, currKeyPressBindings, sizeof(uint32_t) * NUM_OF_KEY_BINDINGS);
-	memcpy(currKeyPressBindings, keyPressBindings, sizeof(uint32_t) * NUM_OF_KEY_BINDINGS);
-	memset(keyPressBindings, 0, sizeof(uint32_t) * NUM_OF_KEY_BINDINGS);
-
-	memcpy(prevKeyReleaseBindings, currKeyReleaseBindings, sizeof(uint32_t) *  NUM_OF_KEY_BINDINGS);
-	memcpy(currKeyReleaseBindings, keyReleaseBindings, sizeof(uint32_t) * NUM_OF_KEY_BINDINGS);
-	memset(keyReleaseBindings, 0, sizeof(uint32_t) * NUM_OF_KEY_BINDINGS);
-	
-}
-
-bool OpenGLRenderer::isKeyPressed(uint32_t _key)
-{
-	assert(_key <= NUM_OF_KEY_BINDINGS);
-	return currKeyPressBindings[_key];
-}
-
-bool OpenGLRenderer::isKeyTriggered(uint32_t _key)
-{
-	assert(_key <= NUM_OF_KEY_BINDINGS);
-	return !prevKeyPressBindings[_key] && currKeyPressBindings[_key];
-}
-
-bool OpenGLRenderer::isKeyReleased(uint32_t _key)
-{
-	assert(_key <= NUM_OF_KEY_BINDINGS);
-	return keyReleaseBindings[_key];
-}
-
-float OpenGLRenderer::mouseX()
-{
-	return mousePosX;
-}
-
-float OpenGLRenderer::mouseY()
-{
-	return mousePosY;
-}
-
-float OpenGLRenderer::scrollX()
-{
-	return scrollXOffset;
-}
-
-float OpenGLRenderer::scrollY()
-{
-	return scrollYOffset;
-}
-
-bool OpenGLRenderer::isMouseLeftPressed()
-{
-	return mouseLeft;
-}
-
-bool OpenGLRenderer::isMouseRightPressed()
-{
-	return mouseRight;
-}
-
 
 //////////////////////////////////////////////////////////
 // CAMERA
@@ -298,16 +156,14 @@ ShaderProgram::ShaderProgram(std::string vertexShaderPath, std::string fragmentS
 
 	int32_t count, length, size;
 	GLenum type;
-	const uint32_t bufferSize = 16;
+	const uint32_t bufferSize = 256;
 	char name[bufferSize] = {};
 
 	glGetProgramiv(mId, GL_ACTIVE_ATTRIBUTES, &count);
 	for (int32_t i = 0; i < count; ++i)
 	{
 		glGetActiveAttrib(mId, i, bufferSize, &length, &size, &type, name);
-		int x = 0;
 	}
-
 
 	glGetProgramiv(mId, GL_ACTIVE_UNIFORMS, &count);
 	for (int32_t i = 0; i < count; ++i)
@@ -467,8 +323,6 @@ void ShaderProgram::SetUniform(const char* name, void* data)
 	}
 }
 
-void OpenGLRenderer::swapwindow() { glfwSwapBuffers(window); }
-
 uint32_t LoadTexture(const char* path)
 {
 	unsigned int texture;
@@ -570,13 +424,13 @@ void Mesh::Draw(ShaderProgram shader)
 		// retrieve texture number (the N in diffuse_textureN)
 		std::string number;
 		std::string name = textures[i].type;
-		if (strcmp(name.c_str(), "texture_diffuse"))
+		if (name == "texture_diffuse")
 			number = std::to_string(diffuseNr++).c_str();
-		else if (strcmp(name.c_str(), "texture_specular"))
+		else if (name == "texture_specular")
 			number = std::to_string(specularNr++).c_str(); // transfer unsigned int to stream
-		else if (strcmp(name.c_str(), "texture_normal"))
+		else if (name == "texture_normal")
 			number = std::to_string(normalNr++).c_str(); // transfer unsigned int to stream
-		else if (strcmp(name.c_str(), "texture_height"))
+		else if (name == "texture_height")
 			number = std::to_string(heightNr++).c_str(); // transfer unsigned int to stream
 
 												 // now set the sampler to the correct texture unit
@@ -749,7 +603,7 @@ tinystl::vector<Texture> Model::loadMaterialTextures(aiMaterial *mat, aiTextureT
 		if (!skip)
 		{   // if texture hasn't been loaded already, load it
 			Texture texture;
-			std::string fullPath = str.C_Str() + this->directory;
+			std::string fullPath = this->directory + "/" + str.C_Str();
 			texture.id = LoadTexture(fullPath.c_str());
 			texture.type = typeName;
 			texture.path = str.C_Str();
@@ -758,41 +612,4 @@ tinystl::vector<Texture> Model::loadMaterialTextures(aiMaterial *mat, aiTextureT
 		}
 	}
 	return textures;
-}
-
-
-///////////////////////////////////////////
-//// GUI
-
-void OpenGLRenderer::initGui()
-{
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
-
-	ImGui::StyleColorsDark();
-
-	ImGui_ImplGlfw_InitForOpenGL(window, true);
-	ImGui_ImplOpenGL3_Init("#version 130");
-}
-
-void OpenGLRenderer::exitGui()
-{
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplGlfw_Shutdown();
-	ImGui::DestroyContext();
-}
-
-void OpenGLRenderer::beginGuiFrame()
-{
-	ImGui_ImplOpenGL3_NewFrame();
-	ImGui_ImplGlfw_NewFrame();
-	ImGui::NewFrame();
-}
-
-void OpenGLRenderer::endGuiFrame()
-{
-	ImGui::Render();
-	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-	ImGui::EndFrame();
 }

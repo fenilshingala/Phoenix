@@ -4,7 +4,6 @@
 #include <string>
 
 #include <glad/glad.h>
-#include <GLFW/glfw3.h>
 #include "../../Common/Thirdparty/TINYSTL/vector.h"
 #include "../../Common/Renderer/keyBindings.h"
 
@@ -13,10 +12,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
-#include <imgui/imgui.h>
-#include <imgui/imgui_impl_glfw.h>
-#include <imgui/imgui_impl_opengl3.h>
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -186,42 +181,9 @@ uint32_t LoadTexture(const char*);
 class OpenGLRenderer
 {
 public:
-	OpenGLRenderer() : window(nullptr), WIDTH(800), HEIGHT(600)
+	OpenGLRenderer()
 	{}
 
 	~OpenGLRenderer()
 	{}
-
-	// WINDOW
-	void initWindow(int _WIDTH = 800, int _HEIGHT = 600);
-	void pollEvents();
-	void waitEvents();
-	int windowShouldClose();
-	void destroyWindow();
-	void swapwindow();
-	inline int windowWidth()  { return WIDTH; }
-	inline int windowHeight() { return HEIGHT; }
-
-	void updateInputs();
-	bool isKeyPressed(uint32_t _key);
-	bool isKeyTriggered(uint32_t _key);
-	bool isKeyReleased(uint32_t _key);
-	float mouseX();
-	float mouseY();
-	float scrollX();
-	float scrollY();
-	bool isMouseLeftPressed();
-	bool isMouseRightPressed();
-
-	// GUI
-	void initGui();
-	void exitGui();
-	void beginGuiFrame();
-	void endGuiFrame();
-
-private:
-	GLFWwindow* window;
-
-	int WIDTH;
-	int HEIGHT;
 };
