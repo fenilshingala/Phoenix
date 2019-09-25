@@ -13,75 +13,116 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Source Files\ImGui">
+    <Filter Include="Source Files\Examples">
+      <UniqueIdentifier>{df07bace-895a-4070-8766-e9e33b99439b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Phoenix">
+      <UniqueIdentifier>{c756e4ef-2b81-4a4f-b5f2-f408c1d4e281}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Phoenix\ImGui">
       <UniqueIdentifier>{7b061957-fdf0-43e0-b75d-b0eaa083db8b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\Shaders">
+      <UniqueIdentifier>{51649c2c-3ab0-486f-bfe5-8c75ba5de0b7}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\RendererOpenGL\main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\RendererOpenGL\RendererOpenGL.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Common\Thirdparty\glad\src\glad.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui.cpp">
-      <Filter>Source Files\ImGui</Filter>
+      <Filter>Source Files\Phoenix\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui_demo.cpp">
-      <Filter>Source Files\ImGui</Filter>
+      <Filter>Source Files\Phoenix\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui_draw.cpp">
-      <Filter>Source Files\ImGui</Filter>
+      <Filter>Source Files\Phoenix\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui_widgets.cpp">
-      <Filter>Source Files\ImGui</Filter>
+      <Filter>Source Files\Phoenix\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui_impl_opengl3.cpp">
-      <Filter>Source Files\ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\RendererOpenGL\Window.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Phoenix\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui_impl_sdl.cpp">
-      <Filter>Source Files\ImGui</Filter>
+      <Filter>Source Files\Phoenix\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\RendererOpenGL\DefferedShading.cpp">
+      <Filter>Source Files\Examples</Filter>
+    </ClCompile>
+    <ClCompile Include="..\RendererOpenGL\ForwardLighting.cpp">
+      <Filter>Source Files\Examples</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\Thirdparty\glad\src\glad.c">
+      <Filter>Source Files\Phoenix</Filter>
+    </ClCompile>
+    <ClCompile Include="..\RendererOpenGL\main.cpp">
+      <Filter>Source Files\Phoenix</Filter>
+    </ClCompile>
+    <ClCompile Include="..\RendererOpenGL\RendererOpenGL.cpp">
+      <Filter>Source Files\Phoenix</Filter>
+    </ClCompile>
+    <ClCompile Include="..\RendererOpenGL\Window.cpp">
+      <Filter>Source Files\Phoenix</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\RendererOpenGL\RendererOpenGL.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\Thirdparty\imgui\imconfig.h">
-      <Filter>Source Files\ImGui</Filter>
+      <Filter>Source Files\Phoenix\ImGui</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Thirdparty\imgui\imgui.h">
-      <Filter>Source Files\ImGui</Filter>
+      <Filter>Source Files\Phoenix\ImGui</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Thirdparty\imgui\imgui_internal.h">
-      <Filter>Source Files\ImGui</Filter>
+      <Filter>Source Files\Phoenix\ImGui</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Thirdparty\imgui\imstb_rectpack.h">
-      <Filter>Source Files\ImGui</Filter>
+      <Filter>Source Files\Phoenix\ImGui</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Thirdparty\imgui\imstb_textedit.h">
-      <Filter>Source Files\ImGui</Filter>
+      <Filter>Source Files\Phoenix\ImGui</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Thirdparty\imgui\imstb_truetype.h">
-      <Filter>Source Files\ImGui</Filter>
+      <Filter>Source Files\Phoenix\ImGui</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Thirdparty\imgui\imgui_impl_opengl3.h">
-      <Filter>Source Files\ImGui</Filter>
+      <Filter>Source Files\Phoenix\ImGui</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Thirdparty\imgui\examples\libs\gl3w\GL\glcorearb.h">
-      <Filter>Source Files\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\RendererOpenGL\Window.h">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Phoenix\ImGui</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Thirdparty\imgui\imgui_impl_sdl.h">
-      <Filter>Source Files\ImGui</Filter>
+      <Filter>Source Files\Phoenix\ImGui</Filter>
     </ClInclude>
+    <ClInclude Include="..\RendererOpenGL\Common.h">
+      <Filter>Source Files\Phoenix</Filter>
+    </ClInclude>
+    <ClInclude Include="..\RendererOpenGL\Picker.h">
+      <Filter>Source Files\Phoenix</Filter>
+    </ClInclude>
+    <ClInclude Include="..\RendererOpenGL\RendererOpenGL.h">
+      <Filter>Source Files\Phoenix</Filter>
+    </ClInclude>
+    <ClInclude Include="..\RendererOpenGL\Window.h">
+      <Filter>Source Files\Phoenix</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\RendererOpenGL\Shaders\deferred_light_box.frag">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\Shaders\deferred_light_box.vert">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\Shaders\deferred_shading.frag">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\Shaders\deferred_shading.vert">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\Shaders\g_buffer.frag">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\Shaders\g_buffer.vert">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

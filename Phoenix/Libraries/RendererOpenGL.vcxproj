@@ -26,6 +26,8 @@
     <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui_impl_opengl3.cpp" />
     <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui_impl_sdl.cpp" />
     <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="..\RendererOpenGL\DefferedShading.cpp" />
+    <ClCompile Include="..\RendererOpenGL\ForwardLighting.cpp" />
     <ClCompile Include="..\RendererOpenGL\main.cpp" />
     <ClCompile Include="..\RendererOpenGL\RendererOpenGL.cpp" />
     <ClCompile Include="..\RendererOpenGL\Window.cpp" />
@@ -40,8 +42,18 @@
     <ClInclude Include="..\..\Common\Thirdparty\imgui\imstb_rectpack.h" />
     <ClInclude Include="..\..\Common\Thirdparty\imgui\imstb_textedit.h" />
     <ClInclude Include="..\..\Common\Thirdparty\imgui\imstb_truetype.h" />
+    <ClInclude Include="..\RendererOpenGL\Common.h" />
+    <ClInclude Include="..\RendererOpenGL\Picker.h" />
     <ClInclude Include="..\RendererOpenGL\RendererOpenGL.h" />
     <ClInclude Include="..\RendererOpenGL\Window.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\RendererOpenGL\Shaders\deferred_light_box.frag" />
+    <None Include="..\RendererOpenGL\Shaders\deferred_light_box.vert" />
+    <None Include="..\RendererOpenGL\Shaders\deferred_shading.frag" />
+    <None Include="..\RendererOpenGL\Shaders\deferred_shading.vert" />
+    <None Include="..\RendererOpenGL\Shaders\g_buffer.frag" />
+    <None Include="..\RendererOpenGL\Shaders\g_buffer.vert" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
