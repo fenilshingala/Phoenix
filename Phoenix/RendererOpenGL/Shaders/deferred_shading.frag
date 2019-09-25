@@ -9,13 +9,21 @@ uniform sampler2D gAlbedoSpec;
 
 struct Light {
     vec3 Position;
+	float pad0;
     vec3 Color;
+	float pad1;
     
     float Linear;
     float Quadratic;
+	float pad2;
+	float pad3;
 };
-const int NR_LIGHTS = 255;
-uniform Light lights[NR_LIGHTS];
+
+const int NR_LIGHTS = 1000;
+layout(std140) uniform LightsBlock {
+	Light lights[NR_LIGHTS];
+};
+
 uniform vec3 viewPos;
 
 void main()

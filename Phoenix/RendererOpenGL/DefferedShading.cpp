@@ -7,6 +7,19 @@
 #include "Common.h"
 #include <iostream>
 
+struct LightBlock
+{
+	glm::vec3 lightPosition;
+	float pad0;
+	glm::vec3 lightColor;
+	float pad1;
+
+	float Linear;
+	float Quadratic;
+	float pad2;
+	float pad3;
+};
+
 // renderCube() renders a 1x1 3D cube in NDC.
 // -------------------------------------------------
 unsigned int cubeVAO = 0;
@@ -179,23 +192,36 @@ void Run()
 
 	// lighting info
 	// -------------
-	const unsigned int NR_LIGHTS = 255;
-	tinystl::vector<glm::vec3> lightPositions;
-	tinystl::vector<glm::vec3> lightColors;
+	const unsigned int NR_LIGHTS = 1000;
+	tinystl::vector<LightBlock> lights(NR_LIGHTS);
 	srand(13);
 	for (unsigned int i = 0; i < NR_LIGHTS; i++)
 	{
 		// calculate slightly random offsets
-		float xPos = (float)(((rand() % 100) / 100.0f) * 6.0f - 3.0f);
-		float yPos = (float)(((rand() % 100) / 100.0f) * 6.0f - 4.0f);
-		float zPos = (float)(((rand() % 100) / 100.0f) * 6.0f - 3.0f);
-		lightPositions.push_back(glm::vec3(xPos, yPos, zPos));
+		float xPos = (float)(((rand() % 200) / 100.0f) * 6.0f - 3.0f);
+		float yPos = (float)(((rand() % 200) / 100.0f) * 6.0f - 4.0f);
+		float zPos = (float)(((rand() % 200) / 100.0f) * 6.0f - 3.0f);
+		lights[i].lightPosition = glm::vec3(xPos, yPos, zPos);
 		// also calculate random color
 		float rColor = (float)(((rand() % 100) / 200.0f) + 0.5f); // between 0.5 and 1.0
 		float gColor = (float)(((rand() % 100) / 200.0f) + 0.5f); // between 0.5 and 1.0
 		float bColor = (float)(((rand() % 100) / 200.0f) + 0.5f); // between 0.5 and 1.0
-		lightColors.push_back(glm::vec3(rColor, gColor, bColor));
+		lights[i].lightColor = glm::vec3(rColor, gColor, bColor);
+		
+		lights[i].Linear	= 0.7f;
+		lights[i].Quadratic = 1.8f;
+		lights[i].pad0 = lights[i].pad1 = lights[i].pad2 = lights[i].pad3 = 0.0f;
 	}
+
+	// lights uniform buffer block
+	int64_t lightBlockSize = sizeof(LightBlock);
+	unsigned int uboLightsBlock;
+	glGenBuffers(1, &uboLightsBlock);
+	glBindBuffer(GL_UNIFORM_BUFFER, uboLightsBlock);
+	glBufferData(GL_UNIFORM_BUFFER, lightBlockSize * NR_LIGHTS, NULL, GL_STATIC_DRAW);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	// define the range of the buffer that links to a uniform binding point
+	glBindBufferRange(GL_UNIFORM_BUFFER, 0, uboLightsBlock, 0, lightBlockSize * NR_LIGHTS);
 
 	// shader configuration
 	// --------------------
@@ -208,8 +234,8 @@ void Run()
 	window.initGui();
 
 	float constant = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
-	float linear = 0.7f;
-	float quadratic = 1.8f;
+	float linear = 0.7f, prevLinear = 0.7f;
+	float quadratic = 1.8f, prevQuadratic = 1.8f;
 
 	while (!window.windowShouldClose() && !exitOnESC)
 	{
@@ -260,16 +286,25 @@ void Run()
 		glBindTexture(GL_TEXTURE_2D, gNormal);
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
-		// send light relevant uniforms
-		for (unsigned int i = 0; i < lightPositions.size(); i++)
-		{
-			shaderLightingPass.SetUniform(("lights[" + std::to_string(i) + "].Position").c_str(), &(lightPositions[i]));
-			shaderLightingPass.SetUniform(("lights[" + std::to_string(i) + "].Color").c_str(), &(lightColors[i]));
-			// update attenuation parameters and calculate radius
 
-			shaderLightingPass.SetUniform(("lights[" + std::to_string(i) + "].Linear").c_str(), &linear);
-			shaderLightingPass.SetUniform(("lights[" + std::to_string(i) + "].Quadratic").c_str(), &quadratic);
+		// send light relevant uniforms
+		{
+			glBindBuffer(GL_UNIFORM_BUFFER, uboLightsBlock);
+			
+			if (linear != prevLinear || quadratic != prevQuadratic)
+			{
+				for (uint64_t i = 0; i < lights.size(); ++i)
+				{
+					lights[i].Linear	= linear;
+					lights[i].Quadratic = quadratic;
+				}
+				prevLinear	  = linear;
+				prevQuadratic = quadratic;
+			}
+			glBufferSubData(GL_UNIFORM_BUFFER, 0, lightBlockSize * NR_LIGHTS, lights.data());
+			glBindBuffer(GL_UNIFORM_BUFFER, 0);
 		}
+
 		shaderLightingPass.SetUniform("viewPos", &(camera.Position));
 		// finally render quad
 		renderQuad();
@@ -289,13 +324,13 @@ void Run()
 		glUseProgram(shaderLightBox.mId);
 		shaderLightBox.SetUniform("projection", &projection);
 		shaderLightBox.SetUniform("view", &view);
-		for (unsigned int i = 0; i < lightPositions.size(); i++)
+		for (unsigned int i = 0; i < lights.size(); i++)
 		{
 			model = glm::mat4(1.0f);
-			model = glm::translate(model, lightPositions[i]);
+			model = glm::translate(model, lights[i].lightPosition);
 			model = glm::scale(model, glm::vec3(0.125f));
 			shaderLightBox.SetUniform("model", &model);
-			shaderLightBox.SetUniform("lightColor", &lightColors[i]);
+			shaderLightBox.SetUniform("lightColor", &lights[i].lightColor);
 			renderCube();
 		}
 
