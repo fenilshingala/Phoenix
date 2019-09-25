@@ -19,7 +19,7 @@ struct Light {
 	float pad3;
 };
 
-const int NR_LIGHTS = 1000;
+const int NR_LIGHTS = 200;
 layout(std140) uniform LightsBlock {
 	Light lights[NR_LIGHTS];
 };

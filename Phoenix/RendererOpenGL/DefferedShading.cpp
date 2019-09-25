@@ -20,6 +20,8 @@ struct LightBlock
 	float pad3;
 };
 
+const unsigned int NR_LIGHTS = 200;
+
 // renderCube() renders a 1x1 3D cube in NDC.
 // -------------------------------------------------
 unsigned int cubeVAO = 0;
@@ -27,7 +29,8 @@ unsigned int cubeVBO = 0;
 void renderCube()
 {
 	glBindVertexArray(cubeVAO);
-	glDrawArrays(GL_TRIANGLES, 0, 36);
+	//glDrawArrays(GL_TRIANGLES, 0, 36);
+	glDrawArraysInstanced(GL_TRIANGLES, 0, 36, NR_LIGHTS);
 	glBindVertexArray(0);
 }
 
@@ -70,6 +73,24 @@ void Run()
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
 
 	//////////////////////////////////////////////// CUBE
+	glm::vec3 translations[NR_LIGHTS];
+	int index = 0;
+	float offset = 0.1f;
+	for (int i = 0; i < NR_LIGHTS; ++i)
+	{
+		float xPos = (float)(((rand() % 200) / 100.0f) * 6.0f - 3.0f);
+		float yPos = (float)(((rand() % 200) / 100.0f) * 6.0f - 4.0f);
+		float zPos = (float)(((rand() % 200) / 100.0f) * 6.0f - 3.0f);
+		glm::vec3 translation = glm::vec3(xPos, yPos, zPos);
+		translations[index++] = translation;
+	}
+
+	unsigned int instanceVBO;
+	glGenBuffers(1, &instanceVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * 100, &translations[0], GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
 	float vertices[] = {
 		// back face
 		-1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
@@ -128,6 +149,12 @@ void Run()
 	glEnableVertexAttribArray(2);
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	
+	glEnableVertexAttribArray(3);
+	glBindBuffer(GL_ARRAY_BUFFER, instanceVBO); // this attribute comes from a different vertex buffer
+	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glVertexAttribDivisor(3, 1); // tell OpenGL this is an instanced vertex attribute.
 	glBindVertexArray(0);
 
 	// SHADERS
@@ -192,7 +219,6 @@ void Run()
 
 	// lighting info
 	// -------------
-	const unsigned int NR_LIGHTS = 1000;
 	tinystl::vector<LightBlock> lights(NR_LIGHTS);
 	srand(13);
 	for (unsigned int i = 0; i < NR_LIGHTS; i++)
@@ -208,8 +234,8 @@ void Run()
 		float bColor = (float)(((rand() % 100) / 200.0f) + 0.5f); // between 0.5 and 1.0
 		lights[i].lightColor = glm::vec3(rColor, gColor, bColor);
 		
-		lights[i].Linear	= 0.7f;
-		lights[i].Quadratic = 1.8f;
+		lights[i].Linear	= 0.0f;
+		lights[i].Quadratic = 3.0f;
 		lights[i].pad0 = lights[i].pad1 = lights[i].pad2 = lights[i].pad3 = 0.0f;
 	}
 
@@ -234,8 +260,8 @@ void Run()
 	window.initGui();
 
 	float constant = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
-	float linear = 0.7f, prevLinear = 0.7f;
-	float quadratic = 1.8f, prevQuadratic = 1.8f;
+	float linear = 0.0f, prevLinear = 0.7f;
+	float quadratic = 3.0f, prevQuadratic = 1.8f;
 
 	while (!window.windowShouldClose() && !exitOnESC)
 	{
@@ -291,7 +317,7 @@ void Run()
 		{
 			glBindBuffer(GL_UNIFORM_BUFFER, uboLightsBlock);
 			
-			if (linear != prevLinear || quadratic != prevQuadratic)
+			/*if (linear != prevLinear || quadratic != prevQuadratic)
 			{
 				for (uint64_t i = 0; i < lights.size(); ++i)
 				{
@@ -300,7 +326,7 @@ void Run()
 				}
 				prevLinear	  = linear;
 				prevQuadratic = quadratic;
-			}
+			}*/
 			glBufferSubData(GL_UNIFORM_BUFFER, 0, lightBlockSize * NR_LIGHTS, lights.data());
 			glBindBuffer(GL_UNIFORM_BUFFER, 0);
 		}
@@ -327,7 +353,7 @@ void Run()
 		for (unsigned int i = 0; i < lights.size(); i++)
 		{
 			model = glm::mat4(1.0f);
-			model = glm::translate(model, lights[i].lightPosition);
+			//model = glm::translate(model, lights[i].lightPosition);
 			model = glm::scale(model, glm::vec3(0.125f));
 			shaderLightBox.SetUniform("model", &model);
 			shaderLightBox.SetUniform("lightColor", &lights[i].lightColor);
