@@ -20,7 +20,7 @@ struct LightBlock
 	float pad3;
 };
 
-const unsigned int NR_LIGHTS = 200;
+const unsigned int NR_LIGHTS = 100;
 
 // renderCube() renders a 1x1 3D cube in NDC.
 // -------------------------------------------------
@@ -79,29 +79,45 @@ void Run()
 		glm::mat4 lightModel;
 		glm::vec3 lightColor;
 	};
-	instancedData data[NR_LIGHTS];
+	
+	instancedData instanceData[NR_LIGHTS];
+	tinystl::vector<LightBlock> lights(NR_LIGHTS);
 
 	srand(13);
 	for (int i = 0; i < NR_LIGHTS; ++i)
 	{
-		data[i].lightModel = glm::mat4(1.0f);
-		float xPos = (float)(((rand() % 200) / 100.0f) * 6.0f - 3.0f);
-		float yPos = (float)(((rand() % 200) / 100.0f) * 6.0f - 4.0f);
-		float zPos = (float)(((rand() % 200) / 100.0f) * 6.0f - 3.0f);
-		data[i].lightModel = glm::translate(data[i].lightModel, glm::vec3(xPos, yPos, zPos));
-		data[i].lightModel = glm::scale(data[i].lightModel, glm::vec3(0.125f));
+		instanceData[i].lightModel = glm::mat4(1.0f);
+
+		// position
+		float xPos = (float)(((rand() % 100) / 100.0f) * 2.5f - 1.5f);
+		float yPos = (float)(((rand() % 100) / 100.0f) * 0.5f - 1.5f);
+		float zPos = (float)(((rand() % 100) / 100.0f) * 20.0f - 7.0f);
+		
+		lights[i].lightPosition = glm::vec3(xPos, yPos, zPos);
+		instanceData[i].lightModel = glm::translate(instanceData[i].lightModel, glm::vec3(xPos, yPos, zPos));
+		instanceData[i].lightModel = glm::scale(instanceData[i].lightModel, glm::vec3(0.03f));
 
 		// color
 		float rColor = (float)(((rand() % 100) / 200.0f) + 0.5f); // between 0.5 and 1.0
 		float gColor = (float)(((rand() % 100) / 200.0f) + 0.5f); // between 0.5 and 1.0
 		float bColor = (float)(((rand() % 100) / 200.0f) + 0.5f); // between 0.5 and 1.0
-		data[i].lightColor = glm::vec3(rColor, gColor, bColor);
+
+		lights[i].lightColor = glm::vec3(rColor, gColor, bColor);
+		instanceData[i].lightColor = glm::vec3(rColor, gColor, bColor);
+
+		lights[i].Linear = -10.0f;
+		lights[i].Quadratic = 19.1f;
+		lights[i].pad0 = lights[i].pad1 = lights[i].pad2 = lights[i].pad3 = 0.0f;
 	}
+	
+	float constant = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
+	float linear = -10.0f, prevLinear = -10.0f;
+	float quadratic = 19.1f, prevQuadratic = 19.1f;
 	
 	unsigned int instanceVBO;
 	glGenBuffers(1, &instanceVBO);
 	glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
-	glBufferData(GL_ARRAY_BUFFER, NR_LIGHTS * sizeof(instancedData), &data, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, NR_LIGHTS * sizeof(instancedData), &instanceData, GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	float vertices[] = {
@@ -198,37 +214,8 @@ void Run()
 
 	// load models
 	// -----------
-	Model nanosuit("../../Phoenix/RendererOpenGL/Objects/nanosuit/nanosuit.obj", false, 9);
-	tinystl::vector<glm::vec3> objectPositions;
-	objectPositions.push_back(glm::vec3(-3.0, -3.0, -3.0));
-	objectPositions.push_back(glm::vec3(0.0, -3.0, -3.0));
-	objectPositions.push_back(glm::vec3(3.0, -3.0, -3.0));
-	objectPositions.push_back(glm::vec3(-3.0, -3.0, 0.0));
-	objectPositions.push_back(glm::vec3(0.0, -3.0, 0.0));
-	objectPositions.push_back(glm::vec3(3.0, -3.0, 0.0));
-	objectPositions.push_back(glm::vec3(-3.0, -3.0, 3.0));
-	objectPositions.push_back(glm::vec3(0.0, -3.0, 3.0));
-	objectPositions.push_back(glm::vec3(3.0, -3.0, 3.0));
-
-	// instance vertex buffer
-	const uint32_t total_nanosuits = (uint32_t)objectPositions.size();
-	{
-		tinystl::vector<glm::mat4> nanoModels(total_nanosuits);
+	Model sponza("../../Phoenix/RendererOpenGL/Objects/sponza/sponza.obj", false);
 	
-		for (uint32_t i = 0; i < total_nanosuits; ++i)
-		{
-			nanoModels[i] = glm::mat4(1.0f);
-			nanoModels[i] = glm::translate(nanoModels[i], objectPositions[i]);
-			nanoModels[i] = glm::scale(nanoModels[i], glm::vec3(0.25f));
-		}
-
-		glBindBuffer(GL_ARRAY_BUFFER, nanosuit.instanceVBO);
-		glBufferData(GL_ARRAY_BUFFER, total_nanosuits * sizeof(glm::mat4), nanoModels.data(), GL_STATIC_DRAW);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-	}
-
-
-
 	// configure g-buffer framebuffer
 	// ------------------------------
 	unsigned int gBuffer;
@@ -270,27 +257,7 @@ void Run()
 		std::cout << "Framebuffer not complete!" << std::endl;
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	// lighting info
-	// -------------
-	tinystl::vector<LightBlock> lights(NR_LIGHTS);
-	srand(13);
-	for (unsigned int i = 0; i < NR_LIGHTS; i++)
-	{
-		// calculate slightly random offsets
-		float xPos = (float)(((rand() % 200) / 100.0f) * 6.0f - 3.0f);
-		float yPos = (float)(((rand() % 200) / 100.0f) * 6.0f - 4.0f);
-		float zPos = (float)(((rand() % 200) / 100.0f) * 6.0f - 3.0f);
-		lights[i].lightPosition = glm::vec3(xPos, yPos, zPos);
-		// also calculate random color
-		float rColor = (float)(((rand() % 100) / 200.0f) + 0.5f); // between 0.5 and 1.0
-		float gColor = (float)(((rand() % 100) / 200.0f) + 0.5f); // between 0.5 and 1.0
-		float bColor = (float)(((rand() % 100) / 200.0f) + 0.5f); // between 0.5 and 1.0
-		lights[i].lightColor = glm::vec3(rColor, gColor, bColor);
-		
-		lights[i].Linear	= 0.0f;
-		lights[i].Quadratic = 3.0f;
-		lights[i].pad0 = lights[i].pad1 = lights[i].pad2 = lights[i].pad3 = 0.0f;
-	}
+	
 
 	// lights uniform buffer block
 	int64_t lightBlockSize = sizeof(LightBlock);
@@ -312,9 +279,15 @@ void Run()
 
 	window.initGui();
 
-	float constant = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
-	float linear = 0.0f, prevLinear = 0.7f;
-	float quadratic = 3.0f, prevQuadratic = 1.8f;
+	{
+		glUseProgram(shaderGeometryPass.mId);
+		glm::mat4 model = glm::mat4(1.0f);
+		model = glm::mat4(1.0f);
+		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::translate(model, glm::vec3(0.0, -2.0, 0.0));
+		model = glm::scale(model, glm::vec3(0.01f));
+		shaderGeometryPass.SetUniform("model", &model);
+	}
 
 	while (!window.windowShouldClose() && !exitOnESC)
 	{
@@ -326,8 +299,8 @@ void Run()
 		// GUI - LIGHTS
 		ImGui::Begin("LIGHT SETTINGS!", &truebool);
 
-		ImGui::SliderFloat("linear", &linear, 0.0f, 2.0f);
-		ImGui::SliderFloat("quadratic", &quadratic, 0.0f, 3.0f);
+		ImGui::SliderFloat("linear", &linear, -20.0f, 30.0f);
+		ImGui::SliderFloat("quadratic", &quadratic, 0.0f, 30.0f);
 
 		ImGui::End();
 
@@ -336,7 +309,6 @@ void Run()
 
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)window.windowWidth() / (float)window.windowHeight(), 0.1f, 100.0f);
 		glm::mat4 view = camera.GetViewMatrix();
-		glm::mat4 model = glm::mat4(1.0f);
 
 		// 1. geometry pass: render scene's geometry/color data into gbuffer
 		// -----------------------------------------------------------------
@@ -345,14 +317,8 @@ void Run()
 		glUseProgram(shaderGeometryPass.mId);
 		shaderGeometryPass.SetUniform("projection", &projection);
 		shaderGeometryPass.SetUniform("view", &view);
-		//for (unsigned int i = 0; i < objectPositions.size(); i++)
-		//{
-			//model = glm::mat4(1.0f);
-			//model = glm::translate(model, objectPositions[i]);
-			//model = glm::scale(model, glm::vec3(0.25f));
-			//shaderGeometryPass.SetUniform("model", &model);
-			nanosuit.Draw(shaderGeometryPass);
-		//}
+		sponza.Draw(shaderGeometryPass);
+		
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		// 2. lighting pass: calculate lighting by iterating over a screen filled quad pixel-by-pixel using the gbuffer's content.
@@ -370,7 +336,7 @@ void Run()
 		{
 			glBindBuffer(GL_UNIFORM_BUFFER, uboLightsBlock);
 			
-			/*if (linear != prevLinear || quadratic != prevQuadratic)
+			if (linear != prevLinear || quadratic != prevQuadratic)
 			{
 				for (uint64_t i = 0; i < lights.size(); ++i)
 				{
@@ -379,7 +345,7 @@ void Run()
 				}
 				prevLinear	  = linear;
 				prevQuadratic = quadratic;
-			}*/
+			}
 			glBufferSubData(GL_UNIFORM_BUFFER, 0, lightBlockSize * NR_LIGHTS, lights.data());
 			glBindBuffer(GL_UNIFORM_BUFFER, 0);
 		}
