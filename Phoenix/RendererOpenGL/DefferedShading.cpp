@@ -72,23 +72,36 @@ void Run()
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
 
+	
 	//////////////////////////////////////////////// CUBE
-	glm::vec3 translations[NR_LIGHTS];
-	int index = 0;
-	float offset = 0.1f;
+	struct instancedData
+	{
+		glm::mat4 lightModel;
+		glm::vec3 lightColor;
+	};
+	instancedData data[NR_LIGHTS];
+
+	srand(13);
 	for (int i = 0; i < NR_LIGHTS; ++i)
 	{
+		data[i].lightModel = glm::mat4(1.0f);
 		float xPos = (float)(((rand() % 200) / 100.0f) * 6.0f - 3.0f);
 		float yPos = (float)(((rand() % 200) / 100.0f) * 6.0f - 4.0f);
 		float zPos = (float)(((rand() % 200) / 100.0f) * 6.0f - 3.0f);
-		glm::vec3 translation = glm::vec3(xPos, yPos, zPos);
-		translations[index++] = translation;
-	}
+		data[i].lightModel = glm::translate(data[i].lightModel, glm::vec3(xPos, yPos, zPos));
+		data[i].lightModel = glm::scale(data[i].lightModel, glm::vec3(0.125f));
 
+		// color
+		float rColor = (float)(((rand() % 100) / 200.0f) + 0.5f); // between 0.5 and 1.0
+		float gColor = (float)(((rand() % 100) / 200.0f) + 0.5f); // between 0.5 and 1.0
+		float bColor = (float)(((rand() % 100) / 200.0f) + 0.5f); // between 0.5 and 1.0
+		data[i].lightColor = glm::vec3(rColor, gColor, bColor);
+	}
+	
 	unsigned int instanceVBO;
 	glGenBuffers(1, &instanceVBO);
 	glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * 100, &translations[0], GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, NR_LIGHTS * sizeof(instancedData), &data, GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	float vertices[] = {
@@ -142,19 +155,40 @@ void Run()
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 	// link vertex attributes
 	glBindVertexArray(cubeVAO);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(2);
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	
-	glEnableVertexAttribArray(3);
-	glBindBuffer(GL_ARRAY_BUFFER, instanceVBO); // this attribute comes from a different vertex buffer
-	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glVertexAttribDivisor(3, 1); // tell OpenGL this is an instanced vertex attribute.
+	{
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+
+		{
+			glBindBuffer(GL_ARRAY_BUFFER, instanceVBO); // this attribute comes from a different vertex buffer
+
+			glEnableVertexAttribArray(3);
+			glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, 19 * sizeof(float), (void*)0);
+			glVertexAttribDivisor(3, 1); // tell OpenGL this is an instanced vertex attribute.
+			
+			glEnableVertexAttribArray(4);
+			glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 19 * sizeof(float), (void*)(4 * sizeof(float)));
+			glVertexAttribDivisor(4, 1); // tell OpenGL this is an instanced vertex attribute.
+
+			glEnableVertexAttribArray(5);
+			glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 19 * sizeof(float), (void*)(8 * sizeof(float)));
+			glVertexAttribDivisor(5, 1); // tell OpenGL this is an instanced vertex attribute.
+
+			glEnableVertexAttribArray(6);
+			glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 19 * sizeof(float), (void*)(12 * sizeof(float)));
+			glVertexAttribDivisor(6, 1); // tell OpenGL this is an instanced vertex attribute.
+
+			glEnableVertexAttribArray(7);
+			glVertexAttribPointer(7, 3, GL_FLOAT, GL_FALSE, 19 * sizeof(float), (void*)(16 * sizeof(float)));
+			glVertexAttribDivisor(7, 1); // tell OpenGL this is an instanced vertex attribute.
+
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+		}
+	}
 	glBindVertexArray(0);
 
 	// SHADERS
@@ -350,15 +384,15 @@ void Run()
 		glUseProgram(shaderLightBox.mId);
 		shaderLightBox.SetUniform("projection", &projection);
 		shaderLightBox.SetUniform("view", &view);
-		for (unsigned int i = 0; i < lights.size(); i++)
-		{
-			model = glm::mat4(1.0f);
+		//for (unsigned int i = 0; i < lights.size(); i++)
+		//{
+			//model = glm::mat4(1.0f);
 			//model = glm::translate(model, lights[i].lightPosition);
-			model = glm::scale(model, glm::vec3(0.125f));
-			shaderLightBox.SetUniform("model", &model);
-			shaderLightBox.SetUniform("lightColor", &lights[i].lightColor);
+			//model = glm::scale(model, glm::vec3(0.125f));
+			//shaderLightBox.SetUniform("model", &model);
+			//shaderLightBox.SetUniform("lightColor", &lights[i].lightColor);
 			renderCube();
-		}
+		//}
 
 
 		// GUI - FPS COUNTERS
