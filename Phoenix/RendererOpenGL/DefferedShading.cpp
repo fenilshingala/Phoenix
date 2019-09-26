@@ -198,7 +198,7 @@ void Run()
 
 	// load models
 	// -----------
-	Model nanosuit("../../Phoenix/RendererOpenGL/Objects/nanosuit/nanosuit.obj");
+	Model nanosuit("../../Phoenix/RendererOpenGL/Objects/nanosuit/nanosuit.obj", false, 9);
 	tinystl::vector<glm::vec3> objectPositions;
 	objectPositions.push_back(glm::vec3(-3.0, -3.0, -3.0));
 	objectPositions.push_back(glm::vec3(0.0, -3.0, -3.0));
@@ -211,7 +211,7 @@ void Run()
 	objectPositions.push_back(glm::vec3(3.0, -3.0, 3.0));
 
 	// instance vertex buffer
-	const uint32_t total_nanosuits = objectPositions.size();
+	const uint32_t total_nanosuits = (uint32_t)objectPositions.size();
 	{
 		tinystl::vector<glm::mat4> nanoModels(total_nanosuits);
 	
@@ -222,39 +222,9 @@ void Run()
 			nanoModels[i] = glm::scale(nanoModels[i], glm::vec3(0.25f));
 		}
 
-		unsigned int nanoInstanceVBO;
-		glGenBuffers(1, &nanoInstanceVBO);
-		glBindBuffer(GL_ARRAY_BUFFER, nanoInstanceVBO);
+		glBindBuffer(GL_ARRAY_BUFFER, nanosuit.instanceVBO);
 		glBufferData(GL_ARRAY_BUFFER, total_nanosuits * sizeof(glm::mat4), nanoModels.data(), GL_STATIC_DRAW);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
-	
-		{
-			for (uint32_t i = 0; i < nanosuit.meshes.size(); ++i)
-			{
-				glBindVertexArray(nanosuit.meshes[i].VAO);
-
-				// bind vao
-				glBindBuffer(GL_ARRAY_BUFFER, nanoInstanceVBO); // this attribute comes from a different vertex buffer
-
-				glEnableVertexAttribArray(5);
-				glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void*)0);
-				glVertexAttribDivisor(5, 1); // tell OpenGL this is an instanced vertex attribute.
-
-				glEnableVertexAttribArray(6);
-				glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void*)(4 * sizeof(float)));
-				glVertexAttribDivisor(6, 1); // tell OpenGL this is an instanced vertex attribute.
-
-				glEnableVertexAttribArray(7);
-				glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void*)(8 * sizeof(float)));
-				glVertexAttribDivisor(7, 1); // tell OpenGL this is an instanced vertex attribute.
-
-				glEnableVertexAttribArray(8);
-				glVertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void*)(12 * sizeof(float)));
-				glVertexAttribDivisor(8, 1); // tell OpenGL this is an instanced vertex attribute.
-
-				glBindBuffer(GL_ARRAY_BUFFER, 0);
-			}
-		}
 	}
 
 

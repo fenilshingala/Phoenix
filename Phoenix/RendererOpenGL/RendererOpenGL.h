@@ -69,7 +69,7 @@ public:
 
 	/*  Functions  */
 	// constructor
-	Mesh(tinystl::vector<Vertex> vertices, tinystl::vector<unsigned int> indices, tinystl::vector<Texture> textures);
+	Mesh(tinystl::vector<Vertex> vertices, tinystl::vector<unsigned int> indices, tinystl::vector<Texture> textures, uint32_t instanceCount = 0, unsigned int instanceVBO = 0);
 
 	// render the mesh
 	void Draw(ShaderProgram shader);
@@ -77,10 +77,11 @@ public:
 private:
 	/*  Render data  */
 	unsigned int VBO, EBO;
+	uint32_t meshInstanceCount = 0;
 
 	/*  Functions    */
 	// initializes all the buffer objects/arrays
-	void SetupMesh();
+	void SetupMesh(uint32_t instanceCount, unsigned int instanceVBO);
 };
 
 
@@ -98,12 +99,16 @@ public:
 
 	/*  Functions   */
 	// constructor, expects a filepath to a 3D model.
-	Model(std::string const &path, bool gamma = false);
+	Model(std::string const &path, bool gamma, uint32_t instanceCount = 0);
 
 	// draws the model, and thus all its meshes
 	void Draw(ShaderProgram shader);
 
+	unsigned int instanceVBO;
+
 private:
+	uint32_t instanceCount = 0;
+
 	/*  Functions   */
 	// loads a model with supported ASSIMP extensions from file and stores the resulting meshes in the meshes vector.
 	void loadModel(std::string const &path);

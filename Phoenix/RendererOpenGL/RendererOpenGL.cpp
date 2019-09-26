@@ -363,17 +363,17 @@ uint32_t LoadTexture(const char* path)
 ///////////////////////////////////////////
 //// MESH
 
-Mesh::Mesh(tinystl::vector<Vertex> vertices, tinystl::vector<unsigned int> indices, tinystl::vector<Texture> textures)
+Mesh::Mesh(tinystl::vector<Vertex> vertices, tinystl::vector<unsigned int> indices, tinystl::vector<Texture> textures, uint32_t instanceCount, unsigned int instanceVBO)
 {
 	this->vertices = vertices;
 	this->indices = indices;
 	this->textures = textures;
 
 	// now that we have all the required data, set the vertex buffers and its attribute pointers.
-	SetupMesh();
+	SetupMesh(instanceCount, instanceVBO);
 }
 
-void Mesh::SetupMesh()
+void Mesh::SetupMesh(uint32_t instanceCount, unsigned int instanceVBO)
 {
 	// create buffers/arrays
 	glGenVertexArrays(1, &VAO);
@@ -407,6 +407,31 @@ void Mesh::SetupMesh()
 	// vertex bitangent
 	glEnableVertexAttribArray(4);
 	glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Bitangent));
+
+	if (instanceCount != 0)
+	{
+		meshInstanceCount = instanceCount;
+
+		glBindBuffer(GL_ARRAY_BUFFER, instanceVBO); // this attribute comes from a different vertex buffer
+
+		glEnableVertexAttribArray(5);
+		glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void*)0);
+		glVertexAttribDivisor(5, 1); // tell OpenGL this is an instanced vertex attribute.
+
+		glEnableVertexAttribArray(6);
+		glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void*)(4 * sizeof(float)));
+		glVertexAttribDivisor(6, 1); // tell OpenGL this is an instanced vertex attribute.
+
+		glEnableVertexAttribArray(7);
+		glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void*)(8 * sizeof(float)));
+		glVertexAttribDivisor(7, 1); // tell OpenGL this is an instanced vertex attribute.
+
+		glEnableVertexAttribArray(8);
+		glVertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void*)(12 * sizeof(float)));
+		glVertexAttribDivisor(8, 1); // tell OpenGL this is an instanced vertex attribute.
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+	}
 
 	glBindVertexArray(0);
 }
@@ -444,8 +469,10 @@ void Mesh::Draw(ShaderProgram shader)
 
 	// draw mesh
 	glBindVertexArray(VAO);
-	//glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, 0);
-	glDrawElementsInstanced(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, 0, 9);
+	if(meshInstanceCount != 0)
+		glDrawElementsInstanced(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, 0, meshInstanceCount);
+	else
+		glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
 
 	// always good practice to set everything back to defaults once configured.
@@ -456,8 +483,13 @@ void Mesh::Draw(ShaderProgram shader)
 ///////////////////////////////////////////
 //// MODEL
 
-Model::Model(std::string const &path, bool gamma) : gammaCorrection(gamma)
-{
+Model::Model(std::string const &path, bool gamma, uint32_t _instanceCount) : gammaCorrection(gamma)
+{ 
+	instanceCount = _instanceCount;
+	if (instanceCount != 0)
+	{
+		glGenBuffers(1, &instanceVBO);
+	}
 	loadModel(path);
 }
 
@@ -580,7 +612,7 @@ Mesh Model::processMesh(aiMesh *mesh, const aiScene *scene)
 	textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
 
 	// return a mesh object created from the extracted mesh data
-	return Mesh(vertices, indices, textures);
+	return Mesh(vertices, indices, textures, instanceCount, instanceVBO);
 }
 
 tinystl::vector<Texture> Model::loadMaterialTextures(aiMaterial *mat, aiTextureType type, std::string typeName)
