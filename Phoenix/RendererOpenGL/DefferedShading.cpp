@@ -210,6 +210,55 @@ void Run()
 	objectPositions.push_back(glm::vec3(0.0, -3.0, 3.0));
 	objectPositions.push_back(glm::vec3(3.0, -3.0, 3.0));
 
+	// instance vertex buffer
+	const uint32_t total_nanosuits = objectPositions.size();
+	{
+		tinystl::vector<glm::mat4> nanoModels(total_nanosuits);
+	
+		for (uint32_t i = 0; i < total_nanosuits; ++i)
+		{
+			nanoModels[i] = glm::mat4(1.0f);
+			nanoModels[i] = glm::translate(nanoModels[i], objectPositions[i]);
+			nanoModels[i] = glm::scale(nanoModels[i], glm::vec3(0.25f));
+		}
+
+		unsigned int nanoInstanceVBO;
+		glGenBuffers(1, &nanoInstanceVBO);
+		glBindBuffer(GL_ARRAY_BUFFER, nanoInstanceVBO);
+		glBufferData(GL_ARRAY_BUFFER, total_nanosuits * sizeof(glm::mat4), nanoModels.data(), GL_STATIC_DRAW);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+	
+		{
+			for (uint32_t i = 0; i < nanosuit.meshes.size(); ++i)
+			{
+				glBindVertexArray(nanosuit.meshes[i].VAO);
+
+				// bind vao
+				glBindBuffer(GL_ARRAY_BUFFER, nanoInstanceVBO); // this attribute comes from a different vertex buffer
+
+				glEnableVertexAttribArray(5);
+				glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void*)0);
+				glVertexAttribDivisor(5, 1); // tell OpenGL this is an instanced vertex attribute.
+
+				glEnableVertexAttribArray(6);
+				glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void*)(4 * sizeof(float)));
+				glVertexAttribDivisor(6, 1); // tell OpenGL this is an instanced vertex attribute.
+
+				glEnableVertexAttribArray(7);
+				glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void*)(8 * sizeof(float)));
+				glVertexAttribDivisor(7, 1); // tell OpenGL this is an instanced vertex attribute.
+
+				glEnableVertexAttribArray(8);
+				glVertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void*)(12 * sizeof(float)));
+				glVertexAttribDivisor(8, 1); // tell OpenGL this is an instanced vertex attribute.
+
+				glBindBuffer(GL_ARRAY_BUFFER, 0);
+			}
+		}
+	}
+
+
+
 	// configure g-buffer framebuffer
 	// ------------------------------
 	unsigned int gBuffer;
@@ -326,14 +375,14 @@ void Run()
 		glUseProgram(shaderGeometryPass.mId);
 		shaderGeometryPass.SetUniform("projection", &projection);
 		shaderGeometryPass.SetUniform("view", &view);
-		for (unsigned int i = 0; i < objectPositions.size(); i++)
-		{
-			model = glm::mat4(1.0f);
-			model = glm::translate(model, objectPositions[i]);
-			model = glm::scale(model, glm::vec3(0.25f));
-			shaderGeometryPass.SetUniform("model", &model);
+		//for (unsigned int i = 0; i < objectPositions.size(); i++)
+		//{
+			//model = glm::mat4(1.0f);
+			//model = glm::translate(model, objectPositions[i]);
+			//model = glm::scale(model, glm::vec3(0.25f));
+			//shaderGeometryPass.SetUniform("model", &model);
 			nanosuit.Draw(shaderGeometryPass);
-		}
+		//}
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		// 2. lighting pass: calculate lighting by iterating over a screen filled quad pixel-by-pixel using the gbuffer's content.
