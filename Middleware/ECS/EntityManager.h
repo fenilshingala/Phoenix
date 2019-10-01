@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Component.h"
+#include <list>
 
 class Entity;
 class EntityManager;
@@ -15,13 +16,7 @@ class Entity
 	friend class EntityManager;
 public:
 	Entity() : ID(0), mComponents() {}
-	~Entity()
-	{
-		for (tinystl::unordered_hash_node<uint32, Component*> component : mComponents)
-		{
-			component.second->~Component();
-		}
-	}
+	~Entity();
 
 	template <typename T>
 	T* GetComponent()
@@ -85,6 +80,8 @@ public:
 		}
 		return nullptr;
 	}
+
+	std::list<Component*> GetComponents(uint32_t);
 
 private:
 	EntityMap mEntities;
