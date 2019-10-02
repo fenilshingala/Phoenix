@@ -83,18 +83,30 @@ void Run()
 	instancedData instanceData[NR_LIGHTS];
 	tinystl::vector<LightBlock> lights(NR_LIGHTS);
 
+	float constant = 0.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
+	float linear = 0.0f, prevLinear = 0.0f;
+	float quadratic = 0.0f, prevQuadratic = 0.0f;
+
 	srand(13);
 	for (int i = 0; i < NR_LIGHTS; ++i)
 	{
 		instanceData[i].lightModel = glm::mat4(1.0f);
 
+#if SCENE_SPONZA
 		// position
 		float xPos = (float)(((rand() % 100) / 100.0f) * 2.5f - 1.5f);
 		float yPos = (float)(((rand() % 100) / 100.0f) * 0.5f - 1.5f);
 		float zPos = (float)(((rand() % 100) / 100.0f) * 20.0f - 7.0f);
-		
+#endif
+
+#if SCENE_NANOSUIT
+		float xPos = (float)(((rand() % 200) / 100.0f) * 6.0f - 3.0f);
+		float yPos = (float)(((rand() % 200) / 100.0f) * 6.0f - 4.0f);
+		float zPos = (float)(((rand() % 200) / 100.0f) * 6.0f - 3.0f);
+#endif
+
 		lights[i].lightPosition = glm::vec3(xPos, yPos, zPos);
-		instanceData[i].lightModel = glm::translate(instanceData[i].lightModel, glm::vec3(xPos, yPos, zPos));
+		instanceData[i].lightModel = glm::translate(instanceData[i].lightModel, lights[i].lightPosition);
 		instanceData[i].lightModel = glm::scale(instanceData[i].lightModel, glm::vec3(0.03f));
 
 		// color
@@ -105,14 +117,16 @@ void Run()
 		lights[i].lightColor = glm::vec3(rColor, gColor, bColor);
 		instanceData[i].lightColor = glm::vec3(rColor, gColor, bColor);
 
-		lights[i].Linear = -10.0f;
-		lights[i].Quadratic = 19.1f;
+#if SCENE_SPONZA
+		prevLinear = linear = lights[i].Linear = -10.0f;
+		prevQuadratic = quadratic = lights[i].Quadratic = 19.1f;
+#endif
+#if SCENE_NANOSUIT
+		prevLinear = linear = lights[i].Linear = 0.0f;
+		prevQuadratic = quadratic = lights[i].Quadratic = 0.75f;
+#endif
 		lights[i].pad0 = lights[i].pad1 = lights[i].pad2 = lights[i].pad3 = 0.0f;
 	}
-	
-	float constant = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
-	float linear = -10.0f, prevLinear = -10.0f;
-	float quadratic = 19.1f, prevQuadratic = 19.1f;
 	
 	unsigned int instanceVBO;
 	glGenBuffers(1, &instanceVBO);
@@ -214,8 +228,52 @@ void Run()
 
 	// load models
 	// -----------
-	Model sponza("../../Phoenix/RendererOpenGL/Objects/sponza/sponza.obj", false);
-	
+#if SCENE_SPONZA
+	Model myModel("../../Phoenix/RendererOpenGL/Objects/sponza/sponza.obj", false);
+
+	glUseProgram(shaderGeometryPass.mId);
+	glm::mat4 model = glm::mat4(1.0f);
+	model = glm::mat4(1.0f);
+	model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	model = glm::translate(model, glm::vec3(0.0, -2.0, 0.0));
+	model = glm::scale(model, glm::vec3(0.01f));
+	shaderGeometryPass.SetUniform("model", &model);
+
+	int notInstanced = 1;
+	shaderGeometryPass.SetUniform("notInstanced", &notInstanced);
+#endif
+
+#if SCENE_NANOSUIT
+	Model myModel("../../Phoenix/RendererOpenGL/Objects/nanosuit/nanosuit.obj", false, 9);
+	tinystl::vector<glm::vec3> objectPositions;
+	objectPositions.push_back(glm::vec3(-3.0, -3.0, -3.0));
+	objectPositions.push_back(glm::vec3(0.0, -3.0, -3.0));
+	objectPositions.push_back(glm::vec3(3.0, -3.0, -3.0));
+	objectPositions.push_back(glm::vec3(-3.0, -3.0, 0.0));
+	objectPositions.push_back(glm::vec3(0.0, -3.0, 0.0));
+	objectPositions.push_back(glm::vec3(3.0, -3.0, 0.0));
+	objectPositions.push_back(glm::vec3(-3.0, -3.0, 3.0));
+	objectPositions.push_back(glm::vec3(0.0, -3.0, 3.0));
+	objectPositions.push_back(glm::vec3(3.0, -3.0, 3.0));
+
+	// instance vertex buffer
+	const uint32_t total_nanosuits = (uint32_t)objectPositions.size();
+	{
+		tinystl::vector<glm::mat4> nanoModels(total_nanosuits);
+
+		for (uint32_t i = 0; i < total_nanosuits; ++i)
+		{
+			nanoModels[i] = glm::mat4(1.0f);
+			nanoModels[i] = glm::translate(nanoModels[i], objectPositions[i]);
+			nanoModels[i] = glm::scale(nanoModels[i], glm::vec3(0.25f));
+		}
+
+		glBindBuffer(GL_ARRAY_BUFFER, myModel.instanceVBO);
+		glBufferData(GL_ARRAY_BUFFER, total_nanosuits * sizeof(glm::mat4), nanoModels.data(), GL_STATIC_DRAW);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+	}
+#endif
+
 	// configure g-buffer framebuffer
 	// ------------------------------
 	unsigned int gBuffer;
@@ -258,7 +316,6 @@ void Run()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	
-
 	// lights uniform buffer block
 	int64_t lightBlockSize = sizeof(LightBlock);
 	unsigned int uboLightsBlock;
@@ -279,16 +336,6 @@ void Run()
 
 	window.initGui();
 
-	{
-		glUseProgram(shaderGeometryPass.mId);
-		glm::mat4 model = glm::mat4(1.0f);
-		model = glm::mat4(1.0f);
-		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		model = glm::translate(model, glm::vec3(0.0, -2.0, 0.0));
-		model = glm::scale(model, glm::vec3(0.01f));
-		shaderGeometryPass.SetUniform("model", &model);
-	}
-
 	while (!window.windowShouldClose() && !exitOnESC)
 	{
 		window.startFrame();
@@ -304,7 +351,7 @@ void Run()
 
 		ImGui::End();
 
-		glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)window.windowWidth() / (float)window.windowHeight(), 0.1f, 100.0f);
@@ -317,7 +364,7 @@ void Run()
 		glUseProgram(shaderGeometryPass.mId);
 		shaderGeometryPass.SetUniform("projection", &projection);
 		shaderGeometryPass.SetUniform("view", &view);
-		sponza.Draw(shaderGeometryPass);
+		myModel.Draw(shaderGeometryPass);
 		
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
