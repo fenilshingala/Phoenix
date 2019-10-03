@@ -25,6 +25,12 @@
     <Filter Include="Resource Files\Shaders">
       <UniqueIdentifier>{51649c2c-3ab0-486f-bfe5-8c75ba5de0b7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Examples\Components">
+      <UniqueIdentifier>{fd2f76a9-231f-48d4-b977-d8f962d0d172}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Examples\Systems">
+      <UniqueIdentifier>{e3912fa2-5154-4066-afbd-2e0dc4397a8c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui.cpp">
@@ -62,6 +68,18 @@
     </ClCompile>
     <ClCompile Include="..\RendererOpenGL\Window.cpp">
       <Filter>Source Files\Phoenix</Filter>
+    </ClCompile>
+    <ClCompile Include="..\RendererOpenGL\Physics.cpp">
+      <Filter>Source Files\Examples</Filter>
+    </ClCompile>
+    <ClCompile Include="..\RendererOpenGL\Components\LightComponent.cpp">
+      <Filter>Source Files\Examples\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="..\RendererOpenGL\Components\ModelComponent.cpp">
+      <Filter>Source Files\Examples\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="..\RendererOpenGL\Systems\LightingSystem.cpp">
+      <Filter>Source Files\Examples\Systems</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -103,6 +121,15 @@
     </ClInclude>
     <ClInclude Include="..\RendererOpenGL\Window.h">
       <Filter>Source Files\Phoenix</Filter>
+    </ClInclude>
+    <ClInclude Include="..\RendererOpenGL\Components\LightComponent.h">
+      <Filter>Source Files\Examples\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="..\RendererOpenGL\Components\ModelComponent.h">
+      <Filter>Source Files\Examples\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="..\RendererOpenGL\Systems\LightingSystem.h">
+      <Filter>Source Files\Examples\Systems</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -9,6 +9,7 @@
 #include <stb_image.h>
 
 #include <iostream>
+#include "../../Common/Thirdparty/TINYSTL/unordered_map.h"
 
 //////////////////////////////////////////////////////////
 // CAMERA
@@ -499,6 +500,21 @@ void Model::Draw(ShaderProgram shader)
 		meshes[i].Draw(shader);
 }
 
+tinystl::unordered_map<size_t, Model*> mModelsMap;
+Model* LoadModel(const char* filepath, bool gamma, uint32_t instanceCount)
+{
+	size_t hashedFilePath = hasher(std::string(filepath));
+	tinystl::unordered_map<size_t, Model*>::iterator itr = mModelsMap.find(hashedFilePath);
+	if (itr == mModelsMap.end())
+	{
+		Model* pModel = new Model(filepath, gamma, instanceCount);
+		mModelsMap[hashedFilePath] = pModel;
+		return pModel;
+	}
+
+	return itr->second;
+}
+
 void Model::loadModel(std::string const &path)
 {
 	// read file via ASSIMP
@@ -645,4 +661,158 @@ tinystl::vector<Texture> Model::loadMaterialTextures(aiMaterial *mat, aiTextureT
 		}
 	}
 	return textures;
+}
+
+
+//////////////////////////////////////////////// QUAD
+unsigned int mQuadVAO = 0;
+unsigned int mQuadVBO = 0;
+float quadVertices[] = {
+	// positions        // texture Coords
+	-1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+	-1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+	 1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+	 1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+};
+
+void setupQuad()
+{
+	// setup plane VAO
+	glGenVertexArrays(1, &mQuadVAO);
+	glGenBuffers(1, &mQuadVBO);
+	glBindVertexArray(mQuadVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, mQuadVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+}
+
+
+//////////////////////////////////////////////// CUBE
+unsigned int mCubeVAO = 0;
+unsigned int mCubeVBO = 0;
+float vertices[] = {
+	// Position			  Normals			  TexCoords
+	// back face
+	-1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
+	 1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, // top-right
+	 1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 0.0f, // bottom-right         
+	 1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, // top-right
+	-1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
+	-1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 1.0f, // top-left
+	// front face
+	-1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
+	 1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 0.0f, // bottom-right
+	 1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
+	 1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
+	-1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 1.0f, // top-left
+	-1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
+	// left face
+	-1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-right
+	-1.0f,  1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // top-left
+	-1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-left
+	-1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-left
+	-1.0f, -1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // bottom-right
+	-1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-right
+	// right face
+	 1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
+	 1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
+	 1.0f,  1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // top-right         
+	 1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
+	 1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
+	 1.0f, -1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // bottom-left     
+	// bottom face
+	-1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, // top-right
+	 1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 1.0f, // top-left
+	 1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, // bottom-left
+	 1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, // bottom-left
+	-1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 0.0f, // bottom-right
+	-1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, // top-right
+	// top face
+	-1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
+	 1.0f,  1.0f , 1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // bottom-right
+	 1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 1.0f, // top-right     
+	 1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // bottom-right
+	-1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
+	-1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 0.0f  // bottom-left        
+};
+
+void setupCube()
+{
+	glGenVertexArrays(1, &mCubeVAO);
+	glGenBuffers(1, &mCubeVBO);
+	// fill buffer
+	glBindBuffer(GL_ARRAY_BUFFER, mCubeVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	// link vertex attributes
+	glBindVertexArray(mCubeVAO);
+	{
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+	}
+	glBindVertexArray(0);
+}
+
+OpenGLRenderer::OpenGLRenderer()
+{
+	setupQuad();
+	setupCube();
+}
+
+OpenGLRenderer::~OpenGLRenderer()
+{
+	if (mModelsMap.size())
+	{
+		for (tinystl::unordered_hash_node<size_t, Model*> itr : mModelsMap)
+		{
+			delete itr.second;
+		}
+	}
+
+	glDeleteVertexArrays(1, &mQuadVAO);
+	glDeleteVertexArrays(1, &mCubeVAO);
+}
+
+void BindQuadVAO()
+{
+	glBindVertexArray(mQuadVAO);
+}
+
+void OpenGLRenderer::RenderQuad()
+{
+	glBindVertexArray(mQuadVAO);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glBindVertexArray(0);
+}
+
+void OpenGLRenderer::RenderQuadInstanced(int numOfInstances)
+{
+	glBindVertexArray(mQuadVAO);
+	glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, numOfInstances);
+	glBindVertexArray(0);
+}
+
+void BindCubeVAO()
+{
+	glBindVertexArray(mCubeVAO);
+}
+
+void OpenGLRenderer::RenderCube()
+{
+	glBindVertexArray(mCubeVAO);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+}
+
+void OpenGLRenderer::RenderCubeInstanced(int numOfInstances)
+{
+	glBindVertexArray(mCubeVAO);
+	glDrawArraysInstanced(GL_TRIANGLES, 0, 36, numOfInstances);
+	glBindVertexArray(0);
 }

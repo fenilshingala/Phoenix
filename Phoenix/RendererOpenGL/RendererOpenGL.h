@@ -182,13 +182,19 @@ private:
 };
 
 uint32_t LoadTexture(const char*);
+Model* LoadModel(const char*, bool, uint32_t instanceCount = 0);
+
+void BindQuadVAO();
+void BindCubeVAO();
 
 class OpenGLRenderer
 {
 public:
-	OpenGLRenderer()
-	{}
+	OpenGLRenderer();
+	~OpenGLRenderer();
 
-	~OpenGLRenderer()
-	{}
+	void RenderQuad();
+	void RenderQuadInstanced(int numOfInstances);
+	void RenderCube();
+	void RenderCubeInstanced(int numOfInstances);
 };

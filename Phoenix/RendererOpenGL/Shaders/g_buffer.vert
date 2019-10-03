@@ -11,12 +11,12 @@ out vec3 Normal;
 uniform mat4 view;
 uniform mat4 projection;
 uniform mat4 model;
-uniform bool notInstanced;
+uniform int notInstanced;
 
 void main()
 {
 	mat4 myModel = aModel;
-	if(notInstanced)
+	if(notInstanced == 1)
 	{
 		myModel = model;
 	}
