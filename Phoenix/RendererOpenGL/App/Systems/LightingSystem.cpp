@@ -1,8 +1,8 @@
 #include "LightingSystem.h"
 #include "../Components/LightComponent.h"
 
-#include "../../RendererOpenGL/RendererOpenGL.h"
-#include "../../../Middleware/ECS/EntityManager.h"
+#include "../../../RendererOpenGL/RendererOpenGL.h"
+#include "../../../../Middleware/ECS/EntityManager.h"
 
 struct instancedData
 {

@@ -1,10 +1,10 @@
-#include "Picker.h"
+#include "../Picker.h"
 
 #if DEFFERED_SHADING
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // --------------------------------------------------------------------------------------
-#include "Common.h"
+#include "../Common.h"
 #include <iostream>
 
 struct LightBlock
@@ -222,14 +222,17 @@ void Run()
 	glBindVertexArray(0);
 
 	// SHADERS
-	ShaderProgram shaderGeometryPass("../../Phoenix/RendererOpenGL/Shaders/g_buffer.vert", "../../Phoenix/RendererOpenGL/Shaders/g_buffer.frag");
-	ShaderProgram shaderLightingPass("../../Phoenix/RendererOpenGL/Shaders/deferred_shading.vert", "../../Phoenix/RendererOpenGL/Shaders/deferred_shading.frag");
-	ShaderProgram shaderLightBox("../../Phoenix/RendererOpenGL/Shaders/deferred_light_box.vert", "../../Phoenix/RendererOpenGL/Shaders/deferred_light_box.frag");
+	ShaderProgram shaderGeometryPass("../../Phoenix/RendererOpenGL/App/Resources/Shaders/g_buffer.vert",
+									 "../../Phoenix/RendererOpenGL/App/Resources/Shaders/g_buffer.frag");
+	ShaderProgram shaderLightingPass("../../Phoenix/RendererOpenGL/App/Resources/Shaders/deferred_shading.vert",
+									 "../../Phoenix/RendererOpenGL/App/Resources/Shaders/deferred_shading.frag");
+	ShaderProgram shaderLightBox("../../Phoenix/RendererOpenGL/App/Resources/Shaders/deferred_light_box.vert",
+								 "../../Phoenix/RendererOpenGL/App/Resources/Shaders/deferred_light_box.frag");
 
 	// load models
 	// -----------
 #if SCENE_SPONZA
-	Model myModel("../../Phoenix/RendererOpenGL/Objects/sponza/sponza.obj", false);
+	Model myModel("../../Phoenix/RendererOpenGL/App/Resources/Objects/sponza/sponza.obj", false);
 
 	glUseProgram(shaderGeometryPass.mId);
 	glm::mat4 model = glm::mat4(1.0f);
@@ -238,13 +241,10 @@ void Run()
 	model = glm::translate(model, glm::vec3(0.0, -2.0, 0.0));
 	model = glm::scale(model, glm::vec3(0.01f));
 	shaderGeometryPass.SetUniform("model", &model);
-
-	int notInstanced = 1;
-	shaderGeometryPass.SetUniform("notInstanced", &notInstanced);
 #endif
 
 #if SCENE_NANOSUIT
-	Model myModel("../../Phoenix/RendererOpenGL/Objects/nanosuit/nanosuit.obj", false, 9);
+	Model myModel("../../Phoenix/RendererOpenGL/App/Resources/Objects/nanosuit/nanosuit.obj", false, 9);
 	tinystl::vector<glm::vec3> objectPositions;
 	objectPositions.push_back(glm::vec3(-3.0, -3.0, -3.0));
 	objectPositions.push_back(glm::vec3(0.0, -3.0, -3.0));
@@ -272,6 +272,10 @@ void Run()
 		glBufferData(GL_ARRAY_BUFFER, total_nanosuits * sizeof(glm::mat4), nanoModels.data(), GL_STATIC_DRAW);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
+
+	int instanced = 1;
+	glUseProgram(shaderGeometryPass.mId);
+	shaderGeometryPass.SetUniform("instanced", &instanced);
 #endif
 
 	// configure g-buffer framebuffer

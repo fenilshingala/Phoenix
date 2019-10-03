@@ -1,8 +1,8 @@
-#include "../RendererOpenGL/Picker.h"
+#include "../Picker.h"
 
 #if PHYSICS
 
-#include "../RendererOpenGL/Common.h"
+#include "../Common.h"
 #include "../../Middleware/ECS/EntityManager.h"
 
 #include "Components/ModelComponent.h"
@@ -90,13 +90,16 @@ void Init()
 	// add model component
 	pEntityManager->addComponent<ModelComponent>(sponzaId);
 	pSponzaModel = pSponza->GetComponent<ModelComponent>();
-	pSponzaModel->filepath = "../../Phoenix/RendererOpenGL/Objects/sponza/sponza.obj";
+	pSponzaModel->filepath = "../../Phoenix/RendererOpenGL/App/Resources/Objects/sponza/sponza.obj";
 	pSponzaModel->InitModel();
 
 	// SHADERS
-	shaderGeometryPass = new ShaderProgram("../../Phoenix/RendererOpenGL/Shaders/g_buffer.vert", "../../Phoenix/RendererOpenGL/Shaders/g_buffer.frag");
-	shaderLightingPass = new ShaderProgram("../../Phoenix/RendererOpenGL/Shaders/deferred_shading.vert", "../../Phoenix/RendererOpenGL/Shaders/deferred_shading.frag");
-	shaderLightBox = new ShaderProgram("../../Phoenix/RendererOpenGL/Shaders/deferred_light_box.vert", "../../Phoenix/RendererOpenGL/Shaders/deferred_light_box.frag");
+	shaderGeometryPass = new ShaderProgram("../../Phoenix/RendererOpenGL/App/Resources/Shaders/g_buffer.vert",
+										   "../../Phoenix/RendererOpenGL/App/Resources/Shaders/g_buffer.frag");
+	shaderLightingPass = new ShaderProgram("../../Phoenix/RendererOpenGL/App/Resources/Shaders/deferred_shading.vert",
+										   "../../Phoenix/RendererOpenGL/App/Resources/Shaders/deferred_shading.frag");
+	shaderLightBox = new ShaderProgram("../../Phoenix/RendererOpenGL/App/Resources/Shaders/deferred_light_box.vert",
+									   "../../Phoenix/RendererOpenGL/App/Resources/Shaders/deferred_light_box.frag");
 
 	configureGBuffer();
 
@@ -141,9 +144,6 @@ void Init()
 
 	{
 		glUseProgram(shaderGeometryPass->mId);
-
-		int notInstanced = 1;
-		shaderGeometryPass->SetUniform("notInstanced", &notInstanced);
 
 		glm::mat4 model = glm::mat4(1.0f);
 		model = glm::mat4(1.0f);

@@ -11,14 +11,14 @@ out vec3 Normal;
 uniform mat4 view;
 uniform mat4 projection;
 uniform mat4 model;
-uniform int notInstanced;
+uniform int instanced;
 
 void main()
 {
-	mat4 myModel = aModel;
-	if(notInstanced == 1)
+	mat4 myModel = model;
+	if(instanced == 1)
 	{
-		myModel = model;
+		myModel = aModel;
 	}
 
     vec4 worldPos = myModel * vec4(aPos, 1.0);

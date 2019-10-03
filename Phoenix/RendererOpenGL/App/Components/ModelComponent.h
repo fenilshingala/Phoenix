@@ -1,5 +1,5 @@
-#include "../../../Middleware/ECS/Component.h"
-#include "../../RendererOpenGL/RendererOpenGL.h"
+#include "../../../../Middleware/ECS/Component.h"
+#include "../../../RendererOpenGL/RendererOpenGL.h"
 
 DECLARE_COMPONENT(ModelComponent)
 public:

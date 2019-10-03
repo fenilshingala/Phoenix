@@ -1,8 +1,6 @@
 #include "LightComponent.h"
 
-#include "../../RendererOpenGL/RendererOpenGL.h"
-
-
+#include "../../../RendererOpenGL/RendererOpenGL.h"
 
 DEFINE_COMPONENT(LightComponent)
 

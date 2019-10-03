@@ -31,6 +31,12 @@
     <Filter Include="Source Files\Examples\Systems">
       <UniqueIdentifier>{e3912fa2-5154-4066-afbd-2e0dc4397a8c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\Shaders\DefferedShading">
+      <UniqueIdentifier>{fe1973b0-bc91-4a77-983e-dc71a802f8b0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\Shaders\ForwardLighting">
+      <UniqueIdentifier>{cacc01e1-96bb-4aa8-a748-e6e839e6dc82}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui.cpp">
@@ -51,16 +57,7 @@
     <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui_impl_sdl.cpp">
       <Filter>Source Files\Phoenix\ImGui</Filter>
     </ClCompile>
-    <ClCompile Include="..\RendererOpenGL\DefferedShading.cpp">
-      <Filter>Source Files\Examples</Filter>
-    </ClCompile>
-    <ClCompile Include="..\RendererOpenGL\ForwardLighting.cpp">
-      <Filter>Source Files\Examples</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Common\Thirdparty\glad\src\glad.c">
-      <Filter>Source Files\Phoenix</Filter>
-    </ClCompile>
-    <ClCompile Include="..\RendererOpenGL\main.cpp">
       <Filter>Source Files\Phoenix</Filter>
     </ClCompile>
     <ClCompile Include="..\RendererOpenGL\RendererOpenGL.cpp">
@@ -69,17 +66,26 @@
     <ClCompile Include="..\RendererOpenGL\Window.cpp">
       <Filter>Source Files\Phoenix</Filter>
     </ClCompile>
-    <ClCompile Include="..\RendererOpenGL\Physics.cpp">
+    <ClCompile Include="..\RendererOpenGL\App\Components\LightComponent.cpp">
+      <Filter>Source Files\Examples\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="..\RendererOpenGL\App\Components\ModelComponent.cpp">
+      <Filter>Source Files\Examples\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="..\RendererOpenGL\App\Systems\LightingSystem.cpp">
+      <Filter>Source Files\Examples\Systems</Filter>
+    </ClCompile>
+    <ClCompile Include="..\RendererOpenGL\App\main.cpp">
       <Filter>Source Files\Examples</Filter>
     </ClCompile>
-    <ClCompile Include="..\RendererOpenGL\Components\LightComponent.cpp">
-      <Filter>Source Files\Examples\Components</Filter>
+    <ClCompile Include="..\RendererOpenGL\App\DefferedShading.cpp">
+      <Filter>Source Files\Examples</Filter>
     </ClCompile>
-    <ClCompile Include="..\RendererOpenGL\Components\ModelComponent.cpp">
-      <Filter>Source Files\Examples\Components</Filter>
+    <ClCompile Include="..\RendererOpenGL\App\ForwardLighting.cpp">
+      <Filter>Source Files\Examples</Filter>
     </ClCompile>
-    <ClCompile Include="..\RendererOpenGL\Systems\LightingSystem.cpp">
-      <Filter>Source Files\Examples\Systems</Filter>
+    <ClCompile Include="..\RendererOpenGL\App\Physics.cpp">
+      <Filter>Source Files\Examples</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -122,34 +128,52 @@
     <ClInclude Include="..\RendererOpenGL\Window.h">
       <Filter>Source Files\Phoenix</Filter>
     </ClInclude>
-    <ClInclude Include="..\RendererOpenGL\Components\LightComponent.h">
+    <ClInclude Include="..\RendererOpenGL\App\Components\LightComponent.h">
       <Filter>Source Files\Examples\Components</Filter>
     </ClInclude>
-    <ClInclude Include="..\RendererOpenGL\Components\ModelComponent.h">
+    <ClInclude Include="..\RendererOpenGL\App\Components\ModelComponent.h">
       <Filter>Source Files\Examples\Components</Filter>
     </ClInclude>
-    <ClInclude Include="..\RendererOpenGL\Systems\LightingSystem.h">
+    <ClInclude Include="..\RendererOpenGL\App\Systems\LightingSystem.h">
       <Filter>Source Files\Examples\Systems</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\RendererOpenGL\Shaders\deferred_light_box.frag">
-      <Filter>Resource Files\Shaders</Filter>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\deferred_light_box.frag">
+      <Filter>Resource Files\Shaders\DefferedShading</Filter>
     </None>
-    <None Include="..\RendererOpenGL\Shaders\deferred_light_box.vert">
-      <Filter>Resource Files\Shaders</Filter>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\deferred_light_box.vert">
+      <Filter>Resource Files\Shaders\DefferedShading</Filter>
     </None>
-    <None Include="..\RendererOpenGL\Shaders\deferred_shading.frag">
-      <Filter>Resource Files\Shaders</Filter>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\deferred_shading.frag">
+      <Filter>Resource Files\Shaders\DefferedShading</Filter>
     </None>
-    <None Include="..\RendererOpenGL\Shaders\deferred_shading.vert">
-      <Filter>Resource Files\Shaders</Filter>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\deferred_shading.vert">
+      <Filter>Resource Files\Shaders\DefferedShading</Filter>
     </None>
-    <None Include="..\RendererOpenGL\Shaders\g_buffer.frag">
-      <Filter>Resource Files\Shaders</Filter>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\g_buffer.frag">
+      <Filter>Resource Files\Shaders\DefferedShading</Filter>
     </None>
-    <None Include="..\RendererOpenGL\Shaders\g_buffer.vert">
-      <Filter>Resource Files\Shaders</Filter>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\g_buffer.vert">
+      <Filter>Resource Files\Shaders\DefferedShading</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\basic_lighting.frag">
+      <Filter>Resource Files\Shaders\ForwardLighting</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\basic_lighting.vert">
+      <Filter>Resource Files\Shaders\ForwardLighting</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\model.frag">
+      <Filter>Resource Files\Shaders\ForwardLighting</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\model.vert">
+      <Filter>Resource Files\Shaders\ForwardLighting</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\mesh.frag">
+      <Filter>Resource Files\Shaders\ForwardLighting</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\mesh.vert">
+      <Filter>Resource Files\Shaders\ForwardLighting</Filter>
     </None>
   </ItemGroup>
 </Project>

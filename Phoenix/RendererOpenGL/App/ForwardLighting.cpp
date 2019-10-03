@@ -1,8 +1,11 @@
-#include "Picker.h"
+#include "../Picker.h"
 
 #if FORWARD_LIGHTING
 
-#include "Common.h"
+#include "../Common.h"
+
+// lighting
+glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
 void Run()
 {
@@ -12,8 +15,10 @@ void Run()
 
 	glEnable(GL_DEPTH_TEST);
 	
-	ShaderProgram lightingShader("../../Phoenix/RendererOpenGL/Shaders/basic_lighting.vert", "../../Phoenix/RendererOpenGL/Shaders/basic_lighting.frag");
-	ShaderProgram lampShader("../../Phoenix/RendererOpenGL/Shaders/lamp.vert", "../../Phoenix/RendererOpenGL/Shaders/lamp.frag");
+	ShaderProgram lightingShader("../../Phoenix/RendererOpenGL/App/Resources/Shaders/basic_lighting.vert",
+								 "../../Phoenix/RendererOpenGL/App/Resources/Shaders/basic_lighting.frag");
+	ShaderProgram lampShader("../../Phoenix/RendererOpenGL/App/Resources/Shaders/mesh.vert",
+							 "../../Phoenix/RendererOpenGL/App/Resources/Shaders/mesh.frag");
 
 	float vertices[] = {
 		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
@@ -98,8 +103,6 @@ void Run()
 	//shaderProgram.SetUniform("projection", &projection);
 
 	window.initGui();
-
-	Model ourModel("../../Phoenix/RendererOpenGL/Objects/Player.obj");
 
 	while (!window.windowShouldClose() && !exitOnESC)
 	{
