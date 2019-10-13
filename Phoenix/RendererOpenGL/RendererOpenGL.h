@@ -5,6 +5,7 @@
 
 #include <glad/glad.h>
 #include "../../Common/Thirdparty/TINYSTL/vector.h"
+#include "../../Common/Thirdparty/TINYSTL/unordered_map.h"
 #include "../../Common/Renderer/keyBindings.h"
 
 #define GLM_FORCE_RADIANS
@@ -121,6 +122,126 @@ private:
 	// checks all material textures of a given type and loads the textures if they're not loaded yet.
 	// the required info is returned as a Texture struct.
 	tinystl::vector<Texture> loadMaterialTextures(aiMaterial *mat, aiTextureType type, std::string typeName);
+};
+
+
+/////////////////////
+// SKINNED MESH
+class SkinnedMesh
+{
+public:
+	SkinnedMesh();
+
+	~SkinnedMesh();
+
+	bool LoadMesh(const std::string& Filename);
+
+	void Render();
+
+	uint32_t NumBones() const
+	{
+		return m_NumBones;
+	}
+
+	void BoneTransform(float TimeInSeconds, tinystl::vector<aiMatrix4x4>& Transforms);
+
+private:
+	std::string directory;
+	tinystl::vector<Texture> InitMaterials(const aiMaterial* material, aiTextureType type, std::string typeName);
+
+#define NUM_BONES_PER_VEREX 4
+
+	struct BoneInfo
+	{
+		aiMatrix4x4 BoneOffset;
+		aiMatrix4x4 FinalTransformation;
+		aiMatrix4x4 WorldTransformation;
+
+		BoneInfo()
+		{
+			//BoneOffset.SetZero();
+			//FinalTransformation.SetZero();
+		}
+	};
+
+	struct VertexBoneData
+	{
+		uint32_t IDs[NUM_BONES_PER_VEREX]  = { 0 };
+		float Weights[NUM_BONES_PER_VEREX] = { 0.0f };
+
+		VertexBoneData()
+		{
+			Reset();
+		};
+
+		void Reset()
+		{
+			memset(IDs, 0, sizeof(IDs) / sizeof(IDs[0]));
+			memset(Weights, 0, sizeof(Weights) / sizeof(Weights[0]));
+			//ZERO_MEM(IDs);
+			//ZERO_MEM(Weights);
+		}
+
+		void AddBoneData(uint32_t BoneID, float Weight);
+	};
+
+	void CalcInterpolatedScaling(aiVector3D& Out, float AnimationTime, const aiNodeAnim* pNodeAnim);
+	void CalcInterpolatedRotation(aiQuaternion& Out, float AnimationTime, const aiNodeAnim* pNodeAnim);
+	void CalcInterpolatedPosition(aiVector3D& Out, float AnimationTime, const aiNodeAnim* pNodeAnim);
+	uint32_t FindScaling(float AnimationTime, const aiNodeAnim* pNodeAnim);
+	uint32_t FindRotation(float AnimationTime, const aiNodeAnim* pNodeAnim);
+	uint32_t FindPosition(float AnimationTime, const aiNodeAnim* pNodeAnim);
+	const aiNodeAnim* FindNodeAnim(const aiAnimation* pAnimation, const std::string NodeName);
+	void ReadNodeHeirarchy(float AnimationTime, const aiNode* pNode, const aiMatrix4x4& ParentTransform);
+	bool InitFromScene(const aiScene* pScene, const std::string& Filename);
+	void InitMesh(uint32_t MeshIndex,
+		const aiMesh* paiMesh,
+		tinystl::vector<aiVector3D>& Positions,
+		tinystl::vector<aiVector3D>& Normals,
+		tinystl::vector<aiVector2D>& TexCoords,
+		tinystl::vector<VertexBoneData>& Bones,
+		tinystl::vector<unsigned int>& Indices);
+	void LoadBones(uint32_t MeshIndex, const aiMesh* paiMesh, tinystl::vector<VertexBoneData>& Bones);
+
+#define INVALID_MATERIAL 0xFFFFFFFF
+
+	enum VB_TYPES {
+		INDEX_BUFFER,
+		POS_VB,
+		NORMAL_VB,
+		TEXCOORD_VB,
+		BONE_VB,
+		NUM_VBs
+	};
+
+	uint32_t m_VAO;
+	uint32_t m_Buffers[NUM_VBs];
+
+	struct MeshEntry {
+		MeshEntry()
+		{
+			NumIndices = 0;
+			BaseVertex = 0;
+			BaseIndex = 0;
+			MaterialIndex = INVALID_MATERIAL;
+		}
+
+		unsigned int NumIndices;
+		unsigned int BaseVertex;
+		unsigned int BaseIndex;
+		unsigned int MaterialIndex;
+	};
+
+	tinystl::vector<MeshEntry> m_Entries;
+	tinystl::vector<Texture> m_Textures;
+
+	std::unordered_map<std::string, uint32_t> m_BoneMapping; // maps a bone name to its index
+	uint32_t m_NumBones;
+	tinystl::vector<BoneInfo> m_BoneInfo;
+	aiMatrix4x4 m_GlobalInverseTransform;
+
+	const aiScene* m_pScene;
+	Assimp::Importer m_Importer;
 };
 
 

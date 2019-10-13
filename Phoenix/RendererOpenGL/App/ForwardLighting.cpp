@@ -6,6 +6,7 @@
 
 // lighting
 glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+static const uint32_t MAX_BONES = 100;
 
 void Run()
 {
@@ -19,6 +20,11 @@ void Run()
 								 "../../Phoenix/RendererOpenGL/App/Resources/Shaders/basic_lighting.frag");
 	ShaderProgram lampShader("../../Phoenix/RendererOpenGL/App/Resources/Shaders/mesh.vert",
 							 "../../Phoenix/RendererOpenGL/App/Resources/Shaders/mesh.frag");
+	ShaderProgram skinningShader("../../Phoenix/RendererOpenGL/App/Resources/Shaders/skinning.vert",
+								 "../../Phoenix/RendererOpenGL/App/Resources/Shaders/skinning.frag");
+
+	SkinnedMesh mesh;
+	mesh.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/guard/boblampclean.md5mesh");
 
 	float vertices[] = {
 		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
@@ -91,22 +97,17 @@ void Run()
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 
-	//uint32_t texture0 = LoadTexture("../../Phoenix/App/Test/textures/container.jpg");
-	//uint32_t texture1 = LoadTexture("../../Phoenix/App/Test/textures/awesomeface.png");
-	
-	//int zero = 0, one = 1;
-	//glUseProgram(shaderProgram.mId);
-	//shaderProgram.SetUniform("texture1", &zero);
-	//shaderProgram.SetUniform("texture2", &one);
-
-	//glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)window.windowWidth() / (float)window.windowHeight(), 0.1f, 100.0f);
-	//shaderProgram.SetUniform("projection", &projection);
+	glUseProgram(skinningShader.mId);
+	int zero = 0;
+	skinningShader.SetUniform("gColorMap", &zero);
 
 	window.initGui();
 
+	float timer = 0.0f;
 	while (!window.windowShouldClose() && !exitOnESC)
 	{
 		window.startFrame();
+		timer += window.frameTime();
 
 		{
 			glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -128,6 +129,8 @@ void Run()
 			lightingShader.SetUniform("view", &view);
 
 			glm::mat4 model = glm::mat4(1.0f);
+			model = glm::scale(model, glm::vec3(10.0f, 0.3f, 10.0f));
+			model = glm::translate(model, glm::vec3(0.0f, -4.0f, 0.0f));
 			lightingShader.SetUniform("model", &model);
 
 			// render the cube
@@ -147,6 +150,31 @@ void Run()
 
 			glBindVertexArray(lightVAO);
 			glDrawArrays(GL_TRIANGLES, 0, 36);
+
+			// skinning
+			tinystl::vector<aiMatrix4x4> Transforms;
+			glUseProgram(skinningShader.mId);
+			mesh.BoneTransform(timer / 1000.0f, Transforms);
+			for (uint32_t i = 0; i < Transforms.size(); i++)
+			{
+				assert(i < MAX_BONES);
+				//glUniformMatrix4fv(m_boneLocation[Index], 1, GL_TRUE, (const GLfloat*)Transform);
+				std::string gBone = "gBones[" + std::to_string(i) + "]";
+				//skinningShader.SetUniform(gBone.c_str(), &Transforms);
+				glUniformMatrix4fv(glGetUniformLocation(skinningShader.mId, gBone.c_str()), 1, GL_TRUE, (const GLfloat*)&Transforms[i]);
+			}
+
+			skinningShader.SetUniform("gEyeWorldPos", &camera.Position);
+			
+			skinningShader.SetUniform("projection", &projection);
+			skinningShader.SetUniform("view", &view);
+			model = glm::mat4(1.0f);
+			model = glm::translate(model, glm::vec3(0.0f, -1.0f, 0.0f));
+			model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+			model = glm::scale(model, glm::vec3(0.05f, 0.05f, 0.05f));
+			skinningShader.SetUniform("model", &model);
+			
+			mesh.Render();
 
 			// GUI
 			{
