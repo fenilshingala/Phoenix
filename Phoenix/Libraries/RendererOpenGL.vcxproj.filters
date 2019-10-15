@@ -175,5 +175,17 @@
     <None Include="..\RendererOpenGL\App\Resources\Shaders\mesh.vert">
       <Filter>Resource Files\Shaders\ForwardLighting</Filter>
     </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\shadow_depth.frag">
+      <Filter>Resource Files\Shaders\ForwardLighting</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\shadow_depth.vert">
+      <Filter>Resource Files\Shaders\ForwardLighting</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\shadow_debug.frag">
+      <Filter>Resource Files\Shaders\ForwardLighting</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\shadow_debug.vert">
+      <Filter>Resource Files\Shaders\ForwardLighting</Filter>
+    </None>
   </ItemGroup>
 </Project>
