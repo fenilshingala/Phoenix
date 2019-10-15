@@ -33,6 +33,7 @@
     <ClCompile Include="..\RendererOpenGL\App\main.cpp" />
     <ClCompile Include="..\RendererOpenGL\App\Physics.cpp" />
     <ClCompile Include="..\RendererOpenGL\App\Systems\LightingSystem.cpp" />
+    <ClCompile Include="..\RendererOpenGL\Quaternion.cpp" />
     <ClCompile Include="..\RendererOpenGL\RendererOpenGL.cpp" />
     <ClCompile Include="..\RendererOpenGL\Window.cpp" />
   </ItemGroup>
@@ -51,6 +52,7 @@
     <ClInclude Include="..\RendererOpenGL\App\Systems\LightingSystem.h" />
     <ClInclude Include="..\RendererOpenGL\Common.h" />
     <ClInclude Include="..\RendererOpenGL\Picker.h" />
+    <ClInclude Include="..\RendererOpenGL\Quaternion.h" />
     <ClInclude Include="..\RendererOpenGL\RendererOpenGL.h" />
     <ClInclude Include="..\RendererOpenGL\Window.h" />
   </ItemGroup>

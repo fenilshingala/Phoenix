@@ -5,7 +5,7 @@
 #include "../Common.h"
 
 // lighting
-glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+glm::vec3 lightPos(1.2f, 3.0f, 2.0f);
 static const uint32_t MAX_BONES = 100;
 
 void Run()

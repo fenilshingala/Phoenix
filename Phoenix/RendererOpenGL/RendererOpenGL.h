@@ -18,6 +18,8 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
+#include "Quaternion.h"
+
 struct Uniform
 {
 	uint16_t location;
@@ -155,7 +157,6 @@ private:
 	{
 		aiMatrix4x4 BoneOffset;
 		aiMatrix4x4 FinalTransformation;
-		aiMatrix4x4 WorldTransformation;
 
 		BoneInfo()
 		{
@@ -186,7 +187,7 @@ private:
 	};
 
 	void CalcInterpolatedScaling(aiVector3D& Out, float AnimationTime, const aiNodeAnim* pNodeAnim);
-	void CalcInterpolatedRotation(aiQuaternion& Out, float AnimationTime, const aiNodeAnim* pNodeAnim);
+	void CalcInterpolatedRotation(Quaternion& Out, float AnimationTime, const aiNodeAnim* pNodeAnim);
 	void CalcInterpolatedPosition(aiVector3D& Out, float AnimationTime, const aiNodeAnim* pNodeAnim);
 	uint32_t FindScaling(float AnimationTime, const aiNodeAnim* pNodeAnim);
 	uint32_t FindRotation(float AnimationTime, const aiNodeAnim* pNodeAnim);

@@ -11,6 +11,8 @@
 #include <iostream>
 #include "../../Common/Thirdparty/TINYSTL/unordered_map.h"
 
+#include "Quaternion.h"
+
 //////////////////////////////////////////////////////////
 // CAMERA
 
@@ -1105,13 +1107,16 @@ void SkinnedMesh::Render()
 	{
 		const uint32_t MaterialIndex = m_Entries[i].MaterialIndex;
 
-		assert(MaterialIndex < m_Textures.size());
+		if(m_Textures.size() > 0)
+		{
+			assert(MaterialIndex < m_Textures.size());
 
-		//if (m_Textures[MaterialIndex]) {
-			//m_Textures[MaterialIndex]->Bind(GL_TEXTURE0); TO DO
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, m_Textures[MaterialIndex].id);
-		//}
+			//if (m_Textures[MaterialIndex]) {
+				//m_Textures[MaterialIndex]->Bind(GL_TEXTURE0); TO DO
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, m_Textures[MaterialIndex].id);
+			//}
+		}
 
 		glDrawElementsBaseVertex(GL_TRIANGLES,
 			m_Entries[i].NumIndices,
@@ -1196,7 +1201,7 @@ void SkinnedMesh::CalcInterpolatedPosition(aiVector3D& Out, float AnimationTime,
 }
 
 
-void SkinnedMesh::CalcInterpolatedRotation(aiQuaternion& Out, float AnimationTime, const aiNodeAnim* pNodeAnim)
+void SkinnedMesh::CalcInterpolatedRotation(Quaternion& Out, float AnimationTime, const aiNodeAnim* pNodeAnim)
 {
 	// we need at least two values to interpolate...
 	if (pNodeAnim->mNumRotationKeys == 1) {
@@ -1210,10 +1215,10 @@ void SkinnedMesh::CalcInterpolatedRotation(aiQuaternion& Out, float AnimationTim
 	float DeltaTime = (float)(pNodeAnim->mRotationKeys[NextRotationIndex].mTime - pNodeAnim->mRotationKeys[RotationIndex].mTime);
 	float Factor = (AnimationTime - (float)pNodeAnim->mRotationKeys[RotationIndex].mTime) / DeltaTime;
 	assert(Factor >= 0.0f && Factor <= 1.0f);
-	const aiQuaternion& StartRotationQ = pNodeAnim->mRotationKeys[RotationIndex].mValue;
-	const aiQuaternion& EndRotationQ = pNodeAnim->mRotationKeys[NextRotationIndex].mValue;
-	aiQuaternion::Interpolate(Out, StartRotationQ, EndRotationQ, Factor);
-	Out = Out.Normalize();
+	const Quaternion& StartRotationQ = pNodeAnim->mRotationKeys[RotationIndex].mValue;
+	const Quaternion& EndRotationQ = pNodeAnim->mRotationKeys[NextRotationIndex].mValue;
+	Out = Quaternion::interpolate(StartRotationQ, EndRotationQ, Factor);
+	Out.Normalize();
 }
 
 
@@ -1256,9 +1261,10 @@ void SkinnedMesh::ReadNodeHeirarchy(float AnimationTime, const aiNode* pNode, co
 		aiMatrix4x4::Scaling(Scaling, ScalingM);
 
 		// Interpolate rotation and generate rotation transformation matrix
-		aiQuaternion RotationQ;
+		Quaternion RotationQ;
 		CalcInterpolatedRotation(RotationQ, AnimationTime, pNodeAnim);
-		aiMatrix4x4 RotationM = aiMatrix4x4(RotationQ.GetMatrix());
+		aiQuaternion aiRotationQ = RotationQ.toAiQuaternion();
+		aiMatrix4x4 RotationM = aiMatrix4x4(aiRotationQ.GetMatrix());
 
 		// Interpolate translation and generate translation transformation matrix
 		aiVector3D Translation;
