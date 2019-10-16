@@ -40,6 +40,9 @@
     <Filter Include="Source Files\Phoenix\Quaternion">
       <UniqueIdentifier>{bdbe753f-c924-4f13-9f06-085183c8a06a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\Shaders\Animation">
+      <UniqueIdentifier>{567eb588-3ab3-43a7-bfde-b90c90427da2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui.cpp">
@@ -183,6 +186,12 @@
     </None>
     <None Include="..\RendererOpenGL\App\Resources\Shaders\mesh.vert">
       <Filter>Resource Files\Shaders\ForwardLighting</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\skinning.frag">
+      <Filter>Resource Files\Shaders\Animation</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\skinning.vert">
+      <Filter>Resource Files\Shaders\Animation</Filter>
     </None>
   </ItemGroup>
 </Project>

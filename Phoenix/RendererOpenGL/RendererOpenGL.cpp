@@ -1074,7 +1074,7 @@ void SkinnedMesh::LoadBones(uint32_t MeshIndex, const aiMesh* pMesh, tinystl::ve
 	{
 		uint32_t BoneIndex = 0;
 		std::string BoneName(pMesh->mBones[i]->mName.data);
-
+		
 		if (m_BoneMapping.find(BoneName) == m_BoneMapping.end())
 		{
 			// Allocate an index for a new bone
@@ -1263,8 +1263,7 @@ void SkinnedMesh::ReadNodeHeirarchy(float AnimationTime, const aiNode* pNode, co
 		// Interpolate rotation and generate rotation transformation matrix
 		Quaternion RotationQ;
 		CalcInterpolatedRotation(RotationQ, AnimationTime, pNodeAnim);
-		aiQuaternion aiRotationQ = RotationQ.toAiQuaternion();
-		aiMatrix4x4 RotationM = aiMatrix4x4(aiRotationQ.GetMatrix());
+		aiMatrix4x4 RotationM = RotationQ.toAiRotationMatrix();
 
 		// Interpolate translation and generate translation transformation matrix
 		aiVector3D Translation;
@@ -1282,6 +1281,7 @@ void SkinnedMesh::ReadNodeHeirarchy(float AnimationTime, const aiNode* pNode, co
 	{
 		uint32_t BoneIndex = m_BoneMapping[NodeName];
 		m_BoneInfo[BoneIndex].FinalTransformation = m_GlobalInverseTransform * GlobalTransformation * m_BoneInfo[BoneIndex].BoneOffset;
+		m_BoneInfo[BoneIndex].m_BoneInverseTransform = m_GlobalInverseTransform * GlobalTransformation;
 	}
 
 	for (uint32_t i = 0; i < pNode->mNumChildren; i++)
@@ -1291,7 +1291,7 @@ void SkinnedMesh::ReadNodeHeirarchy(float AnimationTime, const aiNode* pNode, co
 }
 
 
-void SkinnedMesh::BoneTransform(float TimeInSeconds, tinystl::vector<aiMatrix4x4>& Transforms)
+void SkinnedMesh::BoneTransform(float TimeInSeconds, tinystl::vector<aiMatrix4x4>& Transforms, tinystl::vector<aiMatrix4x4>& BoneTransforms)
 {
 	aiMatrix4x4 Identity;
 
@@ -1302,10 +1302,12 @@ void SkinnedMesh::BoneTransform(float TimeInSeconds, tinystl::vector<aiMatrix4x4
 	ReadNodeHeirarchy(AnimationTime, m_pScene->mRootNode, Identity);
 
 	Transforms.resize(m_NumBones);
+	BoneTransforms.resize(m_NumBones);
 
 	for (uint32_t i = 0; i < m_NumBones; i++)
 	{
 		Transforms[i] = m_BoneInfo[i].FinalTransformation;
+		BoneTransforms[i] = m_BoneInfo[i].m_BoneInverseTransform;
 	}
 }
 

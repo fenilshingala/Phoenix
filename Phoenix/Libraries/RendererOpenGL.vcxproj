@@ -69,6 +69,8 @@
     <None Include="..\RendererOpenGL\App\Resources\Shaders\mesh.vert" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\model.frag" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\model.vert" />
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\skinning.frag" />
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\skinning.vert" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

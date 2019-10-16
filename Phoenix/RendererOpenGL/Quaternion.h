@@ -2,6 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <assimp/quaternion.h>
+#include <assimp/matrix4x4.h>
 
 class Quaternion
 {
@@ -13,8 +14,11 @@ public:
 
 	void Normalize();
 
-	glm::mat4 toRotationMatrix();
+	glm::mat4   toRotationMatrix();
+	aiMatrix4x4 toAiRotationMatrix();
+
 	Quaternion fromMatrix(glm::mat4 matrix);
+	
 	static Quaternion interpolate(Quaternion a, Quaternion b, float blend);
 
 private:

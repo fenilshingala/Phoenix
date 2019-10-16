@@ -8,6 +8,30 @@
 glm::vec3 lightPos(1.2f, 3.0f, 2.0f);
 static const uint32_t MAX_BONES = 100;
 
+glm::mat4 toGlmMat(aiMatrix4x4 aiMat)
+{
+	glm::mat4 mat;
+	aiMat.Transpose();
+	mat[0][0] = aiMat.a1;
+	mat[0][1] = aiMat.a2;
+	mat[0][2] = aiMat.a3;
+	mat[0][3] = aiMat.a4;
+	mat[1][0] = aiMat.b1;
+	mat[1][1] = aiMat.b2;
+	mat[1][2] = aiMat.b3;
+	mat[1][3] = aiMat.b4;
+	mat[2][0] = aiMat.c1;
+	mat[2][1] = aiMat.c2;
+	mat[2][2] = aiMat.c3;
+	mat[2][3] = aiMat.c4;
+	mat[3][0] = aiMat.d1;
+	mat[3][1] = aiMat.d2;
+	mat[3][2] = aiMat.d3;
+	mat[3][3] = aiMat.d4;
+
+	return mat;
+}
+
 void Run()
 {
 	window.initWindow();
@@ -104,6 +128,8 @@ void Run()
 	window.initGui();
 
 	float timer = 0.0f;
+	bool drawBones = false;
+
 	while (!window.windowShouldClose() && !exitOnESC)
 	{
 		window.startFrame();
@@ -152,29 +178,57 @@ void Run()
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 
 			// skinning
-			tinystl::vector<aiMatrix4x4> Transforms;
-			glUseProgram(skinningShader.mId);
-			mesh.BoneTransform(timer / 1000.0f, Transforms);
-			for (uint32_t i = 0; i < Transforms.size(); i++)
+			tinystl::vector<aiMatrix4x4> Transforms, BoneTransforms;
+			mesh.BoneTransform(timer / 1000.0f, Transforms, BoneTransforms);
+
+			if(!drawBones)
 			{
-				assert(i < MAX_BONES);
-				//glUniformMatrix4fv(m_boneLocation[Index], 1, GL_TRUE, (const GLfloat*)Transform);
-				std::string gBone = "gBones[" + std::to_string(i) + "]";
-				//skinningShader.SetUniform(gBone.c_str(), &Transforms);
-				glUniformMatrix4fv(glGetUniformLocation(skinningShader.mId, gBone.c_str()), 1, GL_TRUE, (const GLfloat*)&Transforms[i]);
+				glUseProgram(skinningShader.mId);
+				for (uint32_t i = 0; i < Transforms.size(); i++)
+				{
+					assert(i < MAX_BONES);
+					std::string gBone = "gBones[" + std::to_string(i) + "]";
+					glUniformMatrix4fv(glGetUniformLocation(skinningShader.mId, gBone.c_str()), 1, GL_TRUE, (const GLfloat*)&Transforms[i]);
+				}
+
+				skinningShader.SetUniform("gEyeWorldPos", &camera.Position);
+
+				skinningShader.SetUniform("projection", &projection);
+				skinningShader.SetUniform("view", &view);
+				model = glm::mat4(1.0f);
+				model = glm::translate(model, glm::vec3(0.0f, -1.0f, 0.0f));
+				model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+				model = glm::scale(model, glm::vec3(0.05f, 0.05f, 0.05f));
+				skinningShader.SetUniform("model", &model);
+
+				mesh.Render();
 			}
 
-			skinningShader.SetUniform("gEyeWorldPos", &camera.Position);
-			
-			skinningShader.SetUniform("projection", &projection);
-			skinningShader.SetUniform("view", &view);
-			model = glm::mat4(1.0f);
-			model = glm::translate(model, glm::vec3(0.0f, -1.0f, 0.0f));
-			model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-			model = glm::scale(model, glm::vec3(0.05f, 0.05f, 0.05f));
-			skinningShader.SetUniform("model", &model);
-			
-			mesh.Render();
+
+			if (drawBones)
+			{
+				glUseProgram(lampShader.mId);
+				lampShader.SetUniform("projection", &projection);
+				lampShader.SetUniform("view", &view);
+
+				glBindVertexArray(lightVAO);
+				for (unsigned int i = 0; i < BoneTransforms.size(); ++i)
+				{
+					aiMatrix4x4 aiModel = BoneTransforms[i];
+					glm::mat4 boneModel = toGlmMat(aiModel);
+
+					glm::mat4 myModel(1.0f);
+					myModel = glm::translate(myModel, glm::vec3(0.0f, -1.0f, 0.0f));
+					myModel = glm::rotate(myModel, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+					myModel = glm::scale(myModel, glm::vec3(0.05f, 0.05f, 0.05f));
+
+					boneModel = myModel * boneModel;
+
+					lampShader.SetUniform("model", &boneModel);
+					//glUniformMatrix4fv(glGetUniformLocation(lampShader.mId, "model"), 1, GL_TRUE, (const GLfloat*)&aiModel);
+					glDrawArrays(GL_TRIANGLES, 0, 36);
+				}
+			}
 
 			// GUI
 			{
@@ -184,10 +238,14 @@ void Run()
 				
 				str = "controlled fps: " + std::to_string(window.frameRate());
 				ImGui::Begin("BLEH!", &truebool);
-				ImGui::Text(str.c_str());
 				
-				str = "actual fps: " + std::to_string(window.actualFrameRate());
-				ImGui::Text(str.c_str());
+					ImGui::Text(str.c_str());
+				
+					str = "actual fps: " + std::to_string(window.actualFrameRate());
+					ImGui::Text(str.c_str());
+
+					ImGui::Checkbox("Draw Bones", &drawBones);
+
 				ImGui::End();
 
 				window.endGuiFrame();

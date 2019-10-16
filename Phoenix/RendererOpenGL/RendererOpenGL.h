@@ -145,7 +145,7 @@ public:
 		return m_NumBones;
 	}
 
-	void BoneTransform(float TimeInSeconds, tinystl::vector<aiMatrix4x4>& Transforms);
+	void BoneTransform(float TimeInSeconds, tinystl::vector<aiMatrix4x4>& Transforms, tinystl::vector<aiMatrix4x4>& BoneTransforms);
 
 private:
 	std::string directory;
@@ -157,6 +157,7 @@ private:
 	{
 		aiMatrix4x4 BoneOffset;
 		aiMatrix4x4 FinalTransformation;
+		aiMatrix4x4 m_BoneInverseTransform;
 
 		BoneInfo()
 		{

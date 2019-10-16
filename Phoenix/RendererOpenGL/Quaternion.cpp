@@ -80,6 +80,38 @@ glm::mat4 Quaternion::toRotationMatrix()
 	return matrix;
 }
 
+aiMatrix4x4 Quaternion::toAiRotationMatrix()
+{
+	aiMatrix4x4 matrix;
+	float xy = x * y;
+	float xz = x * z;
+	float xw = x * w;
+	float yz = y * z;
+	float yw = y * w;
+	float zw = z * w;
+	float xSquared = x * x;
+	float ySquared = y * y;
+	float zSquared = z * z;
+	matrix.a1 = 1 - 2 * (ySquared + zSquared);
+	matrix.a2 = 2 * (xy - zw);
+	matrix.a3 = 2 * (xz + yw);
+	matrix.a4 = 0;
+	matrix.b1 = 2 * (xy + zw);
+	matrix.b2 = 1 - 2 * (xSquared + zSquared);
+	matrix.b3 = 2 * (yz - xw);
+	matrix.b4 = 0;
+	matrix.c1 = 2 * (xz - yw);
+	matrix.c2 = 2 * (yz + xw);
+	matrix.c3 = 1 - 2 * (xSquared + ySquared);
+	matrix.c4 = 0;
+	matrix.d1 = 0;
+	matrix.d2 = 0;
+	matrix.d3 = 0;
+	matrix.d4 = 1;
+
+	return matrix;
+}
+
 Quaternion Quaternion::fromMatrix(glm::mat4 matrix)
 {
 	float w, x, y, z;
