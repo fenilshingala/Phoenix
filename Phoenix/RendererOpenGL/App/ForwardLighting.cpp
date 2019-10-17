@@ -51,6 +51,7 @@ void Run()
 
 	SkinnedMesh mesh;
 	//mesh.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/guard/boblampclean.md5mesh");
+	//mesh.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/nanosuit/nanosuit.obj");
 	mesh.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/Jumping.fbx");
 	mesh.AddAnimation("../../Phoenix/RendererOpenGL/App/Resources/Objects/Walking.fbx");
 	//mesh.AddAnimation("../../Phoenix/RendererOpenGL/App/Resources/Objects/Hip Hop Dancing.fbx");
@@ -58,6 +59,7 @@ void Run()
 	glUseProgram(skinningShader.mId);
 	int zero = 0;
 	skinningShader.SetUniform("gColorMap", &zero);
+	skinningShader.SetUniform("isAnim", &mesh.mIsAnim);
 
 	window.initGui();
 

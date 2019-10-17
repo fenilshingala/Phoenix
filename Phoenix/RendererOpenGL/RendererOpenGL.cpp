@@ -943,7 +943,11 @@ bool SkinnedMesh::LoadMesh(const std::string& Filename)
 		m_GlobalInverseTransform.Inverse();
 		Ret = InitFromScene(m_pScene, Filename);
 
-		mAnimations.push_back(m_pScene->mAnimations[0]);
+		if (m_pScene->mNumAnimations > 0)
+		{
+			mIsAnim = true;
+			mAnimations.push_back(m_pScene->mAnimations[0]);
+		}
 	}
 	else
 	{
@@ -960,7 +964,11 @@ void SkinnedMesh::AddAnimation(const std::string& Filename)
 {
 	const aiScene* anim = m_Importer.ReadFile(Filename.c_str(), aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices);
 	anim = m_Importer.GetOrphanedScene();
-	mAnimations.push_back(anim->mAnimations[0]);
+	if (anim->mNumAnimations > 0)
+	{
+		mIsAnim = true;
+		mAnimations.push_back(anim->mAnimations[0]);
+	}
 }
 
 tinystl::vector<Texture> SkinnedMesh::InitMaterials(const aiMaterial* material, aiTextureType type, std::string typeName)
@@ -1169,7 +1177,7 @@ void SkinnedMesh::Render()
 
 		if(m_Textures.size() > 0)
 		{
-			assert(MaterialIndex < m_Textures.size());
+			//assert(MaterialIndex < m_Textures.size());
 
 			//if (m_Textures[MaterialIndex]) {
 				//m_Textures[MaterialIndex]->Bind(GL_TEXTURE0); TO DO

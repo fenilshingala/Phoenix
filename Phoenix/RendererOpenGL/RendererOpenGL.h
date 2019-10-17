@@ -162,6 +162,8 @@ public:
 	std::vector<const aiAnimation*> mAnimations;
 	void SetCurrentAnimation(int& index);
 
+	bool mIsAnim = false;
+
 private:
 	int mCurrentAnimationIndex = 0;
 
