@@ -667,6 +667,28 @@ tinystl::vector<Texture> Model::loadMaterialTextures(aiMaterial *mat, aiTextureT
 
 
 //////////////////////////////////////////////// QUAD
+unsigned int mLineVAO = 0;
+unsigned int mLineVBO = 0;
+float lineVertices[] = {
+	// positions       
+	0.0f, 0.0f, 0.0f,
+	1.0f, 0.0f, 0.0f
+};
+
+void setupLine()
+{
+	// setup plane VAO
+	glGenVertexArrays(1, &mLineVAO);
+	glGenBuffers(1, &mLineVBO);
+	glBindVertexArray(mLineVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, mLineVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(lineVertices), &lineVertices, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+}
+
+
+//////////////////////////////////////////////// QUAD
 unsigned int mQuadVAO = 0;
 unsigned int mQuadVBO = 0;
 float quadVertices[] = {
@@ -763,6 +785,7 @@ void setupCube()
 
 OpenGLRenderer::OpenGLRenderer()
 {
+	setupLine();
 	setupQuad();
 	setupCube();
 }
@@ -779,6 +802,13 @@ OpenGLRenderer::~OpenGLRenderer()
 
 	glDeleteVertexArrays(1, &mQuadVAO);
 	glDeleteVertexArrays(1, &mCubeVAO);
+}
+
+void OpenGLRenderer::RenderLine()
+{
+	glBindVertexArray(mLineVAO);
+	glDrawArrays(GL_LINES, 0, 2);
+	glBindVertexArray(0);
 }
 
 void BindQuadVAO()
@@ -817,6 +847,24 @@ void OpenGLRenderer::RenderCubeInstanced(int numOfInstances)
 	glBindVertexArray(mCubeVAO);
 	glDrawArraysInstanced(GL_TRIANGLES, 0, 36, numOfInstances);
 	glBindVertexArray(0);
+}
+
+glm::mat4 OpenGLRenderer::ModelMatForLineBWTwoPoints(glm::vec3 A, glm::vec3 B)
+{
+	float scale = glm::distance(A, B);
+	glm::mat4 rot = glm::mat4(1.0f);
+	// Calculate angles using the direction vector
+	glm::vec3 dir = B - A;
+	dir.z *= -1.0f;
+	double y = atan2(dir.z, sqrt(dir.x*dir.x + dir.y*dir.y));
+	double z = atan2(dir.y, dir.x);
+	rot = glm::mat4_cast(glm::quat(glm::vec3(0, y, z)));
+
+	// world space
+	if (scale == 0)
+		return glm::mat4(0.0f);
+
+	return glm::translate(glm::mat4(1.0f), glm::vec3(A)) * rot * glm::scale(glm::mat4(1.0f), glm::vec3(scale, scale, scale));
 }
 
 
@@ -869,6 +917,8 @@ SkinnedMesh::~SkinnedMesh()
 		glDeleteVertexArrays(1, &m_VAO);
 		m_VAO = 0;
 	}
+
+	m_pScene->~aiScene();
 }
 
 bool SkinnedMesh::LoadMesh(const std::string& Filename)
@@ -885,12 +935,15 @@ bool SkinnedMesh::LoadMesh(const std::string& Filename)
 	bool Ret = false;
 
 	m_pScene = m_Importer.ReadFile(Filename.c_str(), aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices);
+	m_pScene = m_Importer.GetOrphanedScene();
 
 	if (m_pScene)
 	{
 		m_GlobalInverseTransform = m_pScene->mRootNode->mTransformation;
 		m_GlobalInverseTransform.Inverse();
 		Ret = InitFromScene(m_pScene, Filename);
+
+		mAnimations.push_back(m_pScene->mAnimations[0]);
 	}
 	else
 	{
@@ -901,6 +954,13 @@ bool SkinnedMesh::LoadMesh(const std::string& Filename)
 	glBindVertexArray(0);
 
 	return Ret;
+}
+
+void SkinnedMesh::AddAnimation(const std::string& Filename)
+{
+	const aiScene* anim = m_Importer.ReadFile(Filename.c_str(), aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices);
+	anim = m_Importer.GetOrphanedScene();
+	mAnimations.push_back(anim->mAnimations[0]);
 }
 
 tinystl::vector<Texture> SkinnedMesh::InitMaterials(const aiMaterial* material, aiTextureType type, std::string typeName)
@@ -1246,8 +1306,8 @@ void SkinnedMesh::ReadNodeHeirarchy(float AnimationTime, const aiNode* pNode, co
 {
 	std::string NodeName(pNode->mName.data);
 
-	const aiAnimation* pAnimation = m_pScene->mAnimations[0];
-
+	const aiAnimation* pAnimation = mAnimations[mCurrentAnimationIndex];
+	
 	aiMatrix4x4 NodeTransformation(pNode->mTransformation);
 
 	const aiNodeAnim* pNodeAnim = FindNodeAnim(pAnimation, NodeName);
@@ -1280,10 +1340,11 @@ void SkinnedMesh::ReadNodeHeirarchy(float AnimationTime, const aiNode* pNode, co
 	if (m_BoneMapping.find(NodeName) != m_BoneMapping.end())
 	{
 		uint32_t BoneIndex = m_BoneMapping[NodeName];
-		m_BoneInfo[BoneIndex].FinalTransformation = m_GlobalInverseTransform * GlobalTransformation * m_BoneInfo[BoneIndex].BoneOffset;
+		m_BoneInfo[BoneIndex].FinalTransformation = m_GlobalInverseTransform * GlobalTransformation * m_BoneInfo[BoneIndex].BoneOffset;	
 		m_BoneInfo[BoneIndex].m_BoneInverseTransform = m_GlobalInverseTransform * GlobalTransformation;
+		mLineSegments.emplace_back(LineSegment( m_GlobalInverseTransform*ParentTransform, m_BoneInfo[BoneIndex].m_BoneInverseTransform ));
 	}
-
+	
 	for (uint32_t i = 0; i < pNode->mNumChildren; i++)
 	{
 		ReadNodeHeirarchy(AnimationTime, pNode->mChildren[i], GlobalTransformation);
@@ -1295,10 +1356,11 @@ void SkinnedMesh::BoneTransform(float TimeInSeconds, tinystl::vector<aiMatrix4x4
 {
 	aiMatrix4x4 Identity;
 
-	float TicksPerSecond = (float)(m_pScene->mAnimations[0]->mTicksPerSecond != 0 ? m_pScene->mAnimations[0]->mTicksPerSecond : 25.0f);
+	float TicksPerSecond = (float)(mAnimations[mCurrentAnimationIndex]->mTicksPerSecond != 0 ? mAnimations[mCurrentAnimationIndex]->mTicksPerSecond : 25.0f);
 	float TimeInTicks = TimeInSeconds * TicksPerSecond;
-	float AnimationTime = fmod(TimeInTicks, (float)m_pScene->mAnimations[0]->mDuration);
+	float AnimationTime = fmod(TimeInTicks, (float)mAnimations[mCurrentAnimationIndex]->mDuration);
 
+	mLineSegments.clear();
 	ReadNodeHeirarchy(AnimationTime, m_pScene->mRootNode, Identity);
 
 	Transforms.resize(m_NumBones);
@@ -1310,7 +1372,6 @@ void SkinnedMesh::BoneTransform(float TimeInSeconds, tinystl::vector<aiMatrix4x4
 		BoneTransforms[i] = m_BoneInfo[i].m_BoneInverseTransform;
 	}
 }
-
 
 const aiNodeAnim* SkinnedMesh::FindNodeAnim(const aiAnimation* pAnimation, const std::string NodeName)
 {
@@ -1325,4 +1386,20 @@ const aiNodeAnim* SkinnedMesh::FindNodeAnim(const aiAnimation* pAnimation, const
 	}
 
 	return NULL;
+}
+
+void SkinnedMesh::SetCurrentAnimation(int& index)
+{
+	if (index >= (int)mAnimations.size())
+	{
+		mCurrentAnimationIndex = 0;
+		index = mCurrentAnimationIndex;
+	}
+	else if (index < 0)
+	{
+		mCurrentAnimationIndex = (int)mAnimations.size()-1;
+		index = mCurrentAnimationIndex;
+	}
+	else
+		mCurrentAnimationIndex = index;
 }

@@ -48,6 +48,49 @@ void Quaternion::Normalize()
 	z /= mag;
 }
 
+Quaternion Quaternion::operator+(const Quaternion& rhs)
+{
+	return Quaternion(w + rhs.w, x + rhs.x, y + rhs.y, z + rhs.z);
+}
+
+Quaternion Quaternion::operator*(const Quaternion& rhs)
+{
+	Quaternion q;
+
+	q.w = w * rhs.w - x * rhs.x - y * rhs.y - z * rhs.z;
+	q.x = w * rhs.x + x * rhs.w + y * rhs.z - z * rhs.y;
+	q.y = w * rhs.y - x * rhs.z + y * rhs.w + z * rhs.x;
+	q.z = w * rhs.z + x * rhs.y - y * rhs.x + z * rhs.w;
+
+	return q;
+}
+
+float Quaternion::Dot(const Quaternion& b)
+{
+	return (w * b.w + x * b.x * y * b.y + z * b.z);
+}
+
+Quaternion Quaternion::Inverse(Quaternion& rotation)
+{
+	return Quaternion(rotation.w, -1.0f * rotation.x, -1.0f * rotation.y, -1.0f * rotation.z);
+}
+
+Quaternion Quaternion::Conjugate()
+{
+	return Quaternion(w, -x, -y, -z);
+}
+
+Quaternion Quaternion::Rotate(float angle, glm::vec3& axis)
+{
+	glm::vec3 vn = axis / (float)axis.length();
+	
+	angle *= 0.0174532925f; // To radians!
+	angle *= 0.5f;
+	float sinAngle = sin(angle);
+
+	return Quaternion(cos(angle), vn.x * sinAngle, vn.y * sinAngle, vn.z * sinAngle);
+}
+
 glm::mat4 Quaternion::toRotationMatrix()
 {
 	glm::mat4 matrix;

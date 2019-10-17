@@ -137,6 +137,7 @@ public:
 	~SkinnedMesh();
 
 	bool LoadMesh(const std::string& Filename);
+	void AddAnimation(const std::string& Filename);
 
 	void Render();
 
@@ -147,7 +148,23 @@ public:
 
 	void BoneTransform(float TimeInSeconds, tinystl::vector<aiMatrix4x4>& Transforms, tinystl::vector<aiMatrix4x4>& BoneTransforms);
 
+	struct LineSegment
+	{
+		aiMatrix4x4 mParent;
+		aiMatrix4x4 mChild;
+
+		LineSegment(aiMatrix4x4 parent, aiMatrix4x4 child) : mParent(parent), mChild(child)
+		{
+		}
+	};
+	std::vector<LineSegment> mLineSegments;
+
+	std::vector<const aiAnimation*> mAnimations;
+	void SetCurrentAnimation(int& index);
+
 private:
+	int mCurrentAnimationIndex = 0;
+
 	std::string directory;
 	tinystl::vector<Texture> InitMaterials(const aiMaterial* material, aiTextureType type, std::string typeName);
 
@@ -316,8 +333,10 @@ public:
 	OpenGLRenderer();
 	~OpenGLRenderer();
 
+	void RenderLine();
 	void RenderQuad();
 	void RenderQuadInstanced(int numOfInstances);
 	void RenderCube();
 	void RenderCubeInstanced(int numOfInstances);
+	glm::mat4 ModelMatForLineBWTwoPoints(glm::vec3 A, glm::vec3 B);
 };

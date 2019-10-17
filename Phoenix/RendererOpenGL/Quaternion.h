@@ -13,7 +13,13 @@ public:
 	aiQuaternion toAiQuaternion();
 
 	void Normalize();
-
+	Quaternion operator+(const Quaternion& rhs);
+	Quaternion operator*(const Quaternion& rhs);
+	float Dot(const Quaternion& b);
+	Quaternion Inverse(Quaternion& rotation);
+	Quaternion Conjugate();
+	Quaternion Rotate(float angle, glm::vec3& axis);
+		
 	glm::mat4   toRotationMatrix();
 	aiMatrix4x4 toAiRotationMatrix();
 

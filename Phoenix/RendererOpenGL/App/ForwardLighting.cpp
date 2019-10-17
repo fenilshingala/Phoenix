@@ -47,79 +47,13 @@ void Run()
 	ShaderProgram skinningShader("../../Phoenix/RendererOpenGL/App/Resources/Shaders/skinning.vert",
 								 "../../Phoenix/RendererOpenGL/App/Resources/Shaders/skinning.frag");
 
+	OpenGLRenderer* pOpenglRenderer = new OpenGLRenderer();
+
 	SkinnedMesh mesh;
-	mesh.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/guard/boblampclean.md5mesh");
-
-	float vertices[] = {
-		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-		 0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-		 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-		 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-		-0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-
-		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-		 0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-		 0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-		 0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-		-0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-
-		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-		-0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-		-0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-
-		 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-		 0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-		 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-		 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-		 0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-		 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-
-		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-		 0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-		 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-		 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-
-		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-		 0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-		 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-		 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-		-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
-	};
-	// first, configure the cube's VAO (and VBO)
-	unsigned int VBO, cubeVAO;
-	glGenVertexArrays(1, &cubeVAO);
-	glGenBuffers(1, &VBO);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	glBindVertexArray(cubeVAO);
-
-	// position attribute
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-	// normal attribute
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
-
-
-	// second, configure the light's VAO (VBO stays the same; the vertices are the same for the light object which is also a 3D cube)
-	unsigned int lightVAO;
-	glGenVertexArrays(1, &lightVAO);
-	glBindVertexArray(lightVAO);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	// note that we update the lamp's position attribute's stride to reflect the updated buffer data
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
+	//mesh.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/guard/boblampclean.md5mesh");
+	mesh.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/Jumping.fbx");
+	mesh.AddAnimation("../../Phoenix/RendererOpenGL/App/Resources/Objects/Walking.fbx");
+	//mesh.AddAnimation("../../Phoenix/RendererOpenGL/App/Resources/Objects/Hip Hop Dancing.fbx");
 
 	glUseProgram(skinningShader.mId);
 	int zero = 0;
@@ -128,8 +62,10 @@ void Run()
 	window.initGui();
 
 	float timer = 0.0f;
+	bool drawJoints = false;
 	bool drawBones = false;
 
+	int animationIndex = 0;
 	while (!window.windowShouldClose() && !exitOnESC)
 	{
 		window.startFrame();
@@ -160,9 +96,7 @@ void Run()
 			lightingShader.SetUniform("model", &model);
 
 			// render the cube
-			glBindVertexArray(cubeVAO);
-			glDrawArrays(GL_TRIANGLES, 0, 36);
-
+			pOpenglRenderer->RenderCube();
 
 			// also draw the lamp object
 			glUseProgram(lampShader.mId);
@@ -174,14 +108,20 @@ void Run()
 			model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
 			lampShader.SetUniform("model", &model);
 
-			glBindVertexArray(lightVAO);
-			glDrawArrays(GL_TRIANGLES, 0, 36);
+			pOpenglRenderer->RenderCube();
 
 			// skinning
 			tinystl::vector<aiMatrix4x4> Transforms, BoneTransforms;
 			mesh.BoneTransform(timer / 1000.0f, Transforms, BoneTransforms);
+			
+			model = glm::mat4(1.0f);
+			model = glm::translate(model, glm::vec3(0.0f, -1.0f, 0.0f));
+			// for guard
+			/*model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+			model = glm::scale(model, glm::vec3(0.05f, 0.05f, 0.05f));*/
+			model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
 
-			if(!drawBones)
+			if(!drawJoints && !drawBones)
 			{
 				glUseProgram(skinningShader.mId);
 				for (uint32_t i = 0; i < Transforms.size(); i++)
@@ -195,15 +135,30 @@ void Run()
 
 				skinningShader.SetUniform("projection", &projection);
 				skinningShader.SetUniform("view", &view);
-				model = glm::mat4(1.0f);
-				model = glm::translate(model, glm::vec3(0.0f, -1.0f, 0.0f));
-				model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-				model = glm::scale(model, glm::vec3(0.05f, 0.05f, 0.05f));
 				skinningShader.SetUniform("model", &model);
-
+				
 				mesh.Render();
 			}
 
+
+			if (drawJoints)
+			{
+				glUseProgram(lampShader.mId);
+				lampShader.SetUniform("projection", &projection);
+				lampShader.SetUniform("view", &view);
+				
+				for (unsigned int i = 0; i < BoneTransforms.size(); ++i)
+				{
+					aiMatrix4x4 aiModel = BoneTransforms[i];
+					glm::mat4 boneModel = toGlmMat(aiModel);
+
+					boneModel = model * boneModel;
+
+					lampShader.SetUniform("model", &boneModel);
+					pOpenglRenderer->RenderCube();
+				}
+				glBindVertexArray(0);
+			}
 
 			if (drawBones)
 			{
@@ -211,24 +166,33 @@ void Run()
 				lampShader.SetUniform("projection", &projection);
 				lampShader.SetUniform("view", &view);
 
-				glBindVertexArray(lightVAO);
-				for (unsigned int i = 0; i < BoneTransforms.size(); ++i)
+				uint32_t size = (uint32_t)mesh.mLineSegments.size();
+				tinystl::vector<float> vertices(size * 2 * 3);
+
+				for (uint32_t i = 1; i < size; ++i)
 				{
-					aiMatrix4x4 aiModel = BoneTransforms[i];
-					glm::mat4 boneModel = toGlmMat(aiModel);
+					aiMatrix4x4 parent = mesh.mLineSegments[i].mParent;
+					aiMatrix4x4 child = mesh.mLineSegments[i].mChild;
 
-					glm::mat4 myModel(1.0f);
-					myModel = glm::translate(myModel, glm::vec3(0.0f, -1.0f, 0.0f));
-					myModel = glm::rotate(myModel, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-					myModel = glm::scale(myModel, glm::vec3(0.05f, 0.05f, 0.05f));
+					aiVector3D parentPos, parentScale, parentRot;
+					aiVector3D childPos, childScale, childRot;
 
-					boneModel = myModel * boneModel;
+					parent.Decompose(parentScale, parentRot, parentPos);
+					child.Decompose(childScale, childRot, childPos);
 
-					lampShader.SetUniform("model", &boneModel);
-					//glUniformMatrix4fv(glGetUniformLocation(lampShader.mId, "model"), 1, GL_TRUE, (const GLfloat*)&aiModel);
-					glDrawArrays(GL_TRIANGLES, 0, 36);
+					glm::vec3 A(parentPos.x, parentPos.y, parentPos.z);
+					glm::vec3 B(childPos.x, childPos.y, childPos.z);
+
+					glm::mat4 FinalmodelMatrix = model * pOpenglRenderer->ModelMatForLineBWTwoPoints(A, B);
+
+					lampShader.SetUniform("model", &FinalmodelMatrix);
+
+					pOpenglRenderer->RenderLine();
 				}
+				glBindVertexArray(0);
+
 			}
+			
 
 			// GUI
 			{
@@ -244,7 +208,11 @@ void Run()
 					str = "actual fps: " + std::to_string(window.actualFrameRate());
 					ImGui::Text(str.c_str());
 
+					ImGui::Checkbox("Draw Joints", &drawJoints);
 					ImGui::Checkbox("Draw Bones", &drawBones);
+					
+					ImGui::InputInt("Animation Index", &animationIndex);
+					mesh.SetCurrentAnimation(animationIndex);
 
 				ImGui::End();
 
@@ -260,11 +228,9 @@ void Run()
 		window.endFrame();
 	}
 
-	window.exitGui();
+	delete pOpenglRenderer;
 
-	glDeleteVertexArrays(1, &cubeVAO);
-	glDeleteVertexArrays(1, &lightVAO);
-	glDeleteBuffers(1, &VBO);
+	window.exitGui();
 
 	window.exitWindow();
 }
