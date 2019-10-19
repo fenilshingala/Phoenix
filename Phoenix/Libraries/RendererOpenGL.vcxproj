@@ -74,6 +74,8 @@
     <None Include="..\RendererOpenGL\App\Resources\Shaders\shadow_debug.vert" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\shadow_depth.frag" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\shadow_depth.vert" />
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\skinning.frag" />
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\skinning.vert" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

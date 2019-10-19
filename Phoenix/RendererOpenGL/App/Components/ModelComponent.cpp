@@ -4,21 +4,23 @@ DEFINE_COMPONENT(ModelComponent)
 
 ModelComponent::ModelComponent()
 {
+	pModel = new SkinnedMesh();
 }
 
 ModelComponent::~ModelComponent()
 {
+	delete pModel;
 }
 
 void ModelComponent::InitModel()
 {
 	if(filepath)
-		pModel = LoadModel(filepath, false);
+		pModel->LoadMesh(filepath, 0);
 }
 
 void ModelComponent::Draw(ShaderProgram program)
 {
-	pModel->Draw(program);
+	pModel->Render(program);
 }
 
 START_REGISTRATION(ModelComponent)

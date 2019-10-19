@@ -363,309 +363,6 @@ uint32_t LoadTexture(const char* path)
 }
 
 
-///////////////////////////////////////////
-//// MESH
-
-Mesh::Mesh(tinystl::vector<Vertex> vertices, tinystl::vector<unsigned int> indices, tinystl::vector<Texture> textures, uint32_t instanceCount, unsigned int instanceVBO)
-{
-	this->vertices = vertices;
-	this->indices = indices;
-	this->textures = textures;
-
-	// now that we have all the required data, set the vertex buffers and its attribute pointers.
-	SetupMesh(instanceCount, instanceVBO);
-}
-
-void Mesh::SetupMesh(uint32_t instanceCount, unsigned int instanceVBO)
-{
-	// create buffers/arrays
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &EBO);
-
-	glBindVertexArray(VAO);
-	// load data into vertex buffers
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	// A great thing about structs is that their memory layout is sequential for all its items.
-	// The effect is that we can simply pass a pointer to the struct and it translates perfectly to a glm::vec3/2 array which
-	// again translates to 3/2 floats which translates to a byte array.
-	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
-
-	// set the vertex attribute pointers
-	// vertex Positions
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
-	// vertex normals
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Normal));
-	// vertex texture coords
-	glEnableVertexAttribArray(2);
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexCoords));
-	// vertex tangent
-	glEnableVertexAttribArray(3);
-	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Tangent));
-	// vertex bitangent
-	glEnableVertexAttribArray(4);
-	glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Bitangent));
-
-	if (instanceCount != 0)
-	{
-		meshInstanceCount = instanceCount;
-
-		glBindBuffer(GL_ARRAY_BUFFER, instanceVBO); // this attribute comes from a different vertex buffer
-
-		glEnableVertexAttribArray(5);
-		glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void*)0);
-		glVertexAttribDivisor(5, 1); // tell OpenGL this is an instanced vertex attribute.
-
-		glEnableVertexAttribArray(6);
-		glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void*)(4 * sizeof(float)));
-		glVertexAttribDivisor(6, 1); // tell OpenGL this is an instanced vertex attribute.
-
-		glEnableVertexAttribArray(7);
-		glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void*)(8 * sizeof(float)));
-		glVertexAttribDivisor(7, 1); // tell OpenGL this is an instanced vertex attribute.
-
-		glEnableVertexAttribArray(8);
-		glVertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void*)(12 * sizeof(float)));
-		glVertexAttribDivisor(8, 1); // tell OpenGL this is an instanced vertex attribute.
-
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-	}
-
-	glBindVertexArray(0);
-}
-
-void Mesh::Draw(ShaderProgram shader)
-{
-	// bind appropriate textures
-	unsigned int diffuseNr = 1;
-	unsigned int specularNr = 1;
-	unsigned int normalNr = 1;
-	unsigned int heightNr = 1;
-	for (unsigned int i = 0; i < textures.size(); i++)
-	{
-		glActiveTexture(GL_TEXTURE0 + i); // active proper texture unit before binding
-		// retrieve texture number (the N in diffuse_textureN)
-		std::string number;
-		std::string name = textures[i].type;
-		if (name == "texture_diffuse")
-			number = std::to_string(diffuseNr++).c_str();
-		else if (name == "texture_specular")
-			number = std::to_string(specularNr++).c_str(); // transfer unsigned int to stream
-		else if (name == "texture_normal")
-			number = std::to_string(normalNr++).c_str(); // transfer unsigned int to stream
-		else if (name == "texture_height")
-			number = std::to_string(heightNr++).c_str(); // transfer unsigned int to stream
-
-												 // now set the sampler to the correct texture unit
-		//glUniform1i(glGetUniformLocation(shader.mID, (name + number).c_str()), i);
-		std::string fullName = name;
-		fullName.append(number.c_str(), number.c_str() + number.size());
-		shader.SetUniform((name + number).c_str(), &i);
-		// and finally bind the texture
-		glBindTexture(GL_TEXTURE_2D, textures[i].id);
-	}
-
-	// draw mesh
-	glBindVertexArray(VAO);
-	if(meshInstanceCount != 0)
-		glDrawElementsInstanced(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, 0, meshInstanceCount);
-	else
-		glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, 0);
-	glBindVertexArray(0);
-
-	// always good practice to set everything back to defaults once configured.
-	glActiveTexture(GL_TEXTURE0);
-}
-
-
-///////////////////////////////////////////
-//// MODEL
-
-Model::Model(std::string const &path, bool gamma, uint32_t _instanceCount) : gammaCorrection(gamma)
-{ 
-	instanceCount = _instanceCount;
-	if (instanceCount != 0)
-	{
-		glGenBuffers(1, &instanceVBO);
-	}
-	loadModel(path);
-}
-
-void Model::Draw(ShaderProgram shader)
-{
-	for (unsigned int i = 0; i < meshes.size(); i++)
-		meshes[i].Draw(shader);
-}
-
-tinystl::unordered_map<size_t, Model*> mModelsMap;
-Model* LoadModel(const char* filepath, bool gamma, uint32_t instanceCount)
-{
-	size_t hashedFilePath = hasher(std::string(filepath));
-	tinystl::unordered_map<size_t, Model*>::iterator itr = mModelsMap.find(hashedFilePath);
-	if (itr == mModelsMap.end())
-	{
-		Model* pModel = new Model(filepath, gamma, instanceCount);
-		mModelsMap[hashedFilePath] = pModel;
-		return pModel;
-	}
-
-	return itr->second;
-}
-
-void Model::loadModel(std::string const &path)
-{
-	// read file via ASSIMP
-	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
-	// check for errors
-	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) // if is Not Zero
-	{
-		std::cout << "ERROR::ASSIMP:: " << importer.GetErrorString() << std::endl;
-		return;
-	}
-	// retrieve the directory path of the filepath
-	directory = path.substr(0, path.find_last_of('/'));
-
-	// process ASSIMP's root node recursively
-	processNode(scene->mRootNode, scene);
-}
-
-void Model::processNode(aiNode *node, const aiScene *scene)
-{
-	// process each mesh located at the current node
-	for (unsigned int i = 0; i < node->mNumMeshes; i++)
-	{
-		// the node object only contains indices to index the actual objects in the scene. 
-		// the scene contains all the data, node is just to keep stuff organized (like relations between nodes).
-		aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-		meshes.push_back(processMesh(mesh, scene));
-	}
-	// after we've processed all of the meshes (if any) we then recursively process each of the children nodes
-	for (unsigned int i = 0; i < node->mNumChildren; i++)
-	{
-		processNode(node->mChildren[i], scene);
-	}
-
-}
-
-Mesh Model::processMesh(aiMesh *mesh, const aiScene *scene)
-{
-	// data to fill
-	tinystl::vector<Vertex> vertices;
-	tinystl::vector<unsigned int> indices;
-	tinystl::vector<Texture> textures;
-
-	// Walk through each of the mesh's vertices
-	for (unsigned int i = 0; i < mesh->mNumVertices; i++)
-	{
-		Vertex vertex;
-		glm::vec3 vector; // we declare a placeholder vector since assimp uses its own vector class that doesn't directly convert to glm's vec3 class so we transfer the data to this placeholder glm::vec3 first.
-		// positions
-		vector.x = mesh->mVertices[i].x;
-		vector.y = mesh->mVertices[i].y;
-		vector.z = mesh->mVertices[i].z;
-		vertex.Position = vector;
-		// normals
-		vector.x = mesh->mNormals[i].x;
-		vector.y = mesh->mNormals[i].y;
-		vector.z = mesh->mNormals[i].z;
-		vertex.Normal = vector;
-		// texture coordinates
-		if (mesh->mTextureCoords[0]) // does the mesh contain texture coordinates?
-		{
-			glm::vec2 vec;
-			// a vertex can contain up to 8 different texture coordinates. We thus make the assumption that we won't 
-			// use models where a vertex can have multiple texture coordinates so we always take the first set (0).
-			vec.x = mesh->mTextureCoords[0][i].x;
-			vec.y = mesh->mTextureCoords[0][i].y;
-			vertex.TexCoords = vec;
-		}
-		else
-			vertex.TexCoords = glm::vec2(0.0f, 0.0f);
-		// tangent
-		vector.x = mesh->mTangents[i].x;
-		vector.y = mesh->mTangents[i].y;
-		vector.z = mesh->mTangents[i].z;
-		vertex.Tangent = vector;
-		// bitangent
-		vector.x = mesh->mBitangents[i].x;
-		vector.y = mesh->mBitangents[i].y;
-		vector.z = mesh->mBitangents[i].z;
-		vertex.Bitangent = vector;
-		vertices.push_back(vertex);
-	}
-	// now wak through each of the mesh's faces (a face is a mesh its triangle) and retrieve the corresponding vertex indices.
-	for (unsigned int i = 0; i < mesh->mNumFaces; i++)
-	{
-		aiFace face = mesh->mFaces[i];
-		// retrieve all indices of the face and store them in the indices vector
-		for (unsigned int j = 0; j < face.mNumIndices; j++)
-			indices.push_back(face.mIndices[j]);
-	}
-	// process materials
-	aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-	// we assume a convention for sampler names in the shaders. Each diffuse texture should be named
-	// as 'texture_diffuseN' where N is a sequential number ranging from 1 to MAX_SAMPLER_NUMBER. 
-	// Same applies to other texture as the following list summarizes:
-	// diffuse: texture_diffuseN
-	// specular: texture_specularN
-	// normal: texture_normalN
-
-	// 1. diffuse maps
-	tinystl::vector<Texture> diffuseMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
-	textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
-	// 2. specular maps
-	tinystl::vector<Texture> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular");
-	textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
-	// 3. normal maps
-	tinystl::vector<Texture> normalMaps = loadMaterialTextures(material, aiTextureType_HEIGHT, "texture_normal");
-	textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
-	// 4. height maps
-	tinystl::vector<Texture> heightMaps = loadMaterialTextures(material, aiTextureType_AMBIENT, "texture_height");
-	textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
-
-	// return a mesh object created from the extracted mesh data
-	return Mesh(vertices, indices, textures, instanceCount, instanceVBO);
-}
-
-tinystl::vector<Texture> Model::loadMaterialTextures(aiMaterial *mat, aiTextureType type, std::string typeName)
-{
-	tinystl::vector<Texture> textures;
-	for (unsigned int i = 0; i < mat->GetTextureCount(type); i++)
-	{
-		aiString str;
-		mat->GetTexture(type, i, &str);
-		// check if texture was loaded before and if so, continue to next iteration: skip loading a new texture
-		bool skip = false;
-		for (unsigned int j = 0; j < textures_loaded.size(); j++)
-		{
-			if (std::strcmp(textures_loaded[j].path.data(), str.C_Str()) == 0)
-			{
-				textures.push_back(textures_loaded[j]);
-				skip = true; // a texture with the same filepath has already been loaded, continue to next one. (optimization)
-				break;
-			}
-		}
-		if (!skip)
-		{   // if texture hasn't been loaded already, load it
-			Texture texture;
-			std::string fullPath = this->directory + "/" + str.C_Str();
-			texture.id = LoadTexture(fullPath.c_str());
-			texture.type = typeName;
-			texture.path = str.C_Str();
-			textures.push_back(texture);
-			textures_loaded.push_back(texture);  // store it as texture loaded for entire model, to ensure we won't unnecesery load duplicate textures.
-		}
-	}
-	return textures;
-}
-
-
 //////////////////////////////////////////////// QUAD
 unsigned int mLineVAO = 0;
 unsigned int mLineVBO = 0;
@@ -792,14 +489,6 @@ OpenGLRenderer::OpenGLRenderer()
 
 OpenGLRenderer::~OpenGLRenderer()
 {
-	if (mModelsMap.size())
-	{
-		for (tinystl::unordered_hash_node<size_t, Model*> itr : mModelsMap)
-		{
-			delete itr.second;
-		}
-	}
-
 	glDeleteVertexArrays(1, &mQuadVAO);
 	glDeleteVertexArrays(1, &mCubeVAO);
 }
@@ -869,8 +558,8 @@ glm::mat4 OpenGLRenderer::ModelMatForLineBWTwoPoints(glm::vec3 A, glm::vec3 B)
 
 
 #define POSITION_LOCATION    0
-#define TEX_COORD_LOCATION   1
-#define NORMAL_LOCATION      2
+#define NORMAL_LOCATION      1
+#define TEX_COORD_LOCATION   2
 #define BONE_ID_LOCATION     3
 #define BONE_WEIGHT_LOCATION 4
 
@@ -902,10 +591,10 @@ SkinnedMesh::SkinnedMesh()
 
 SkinnedMesh::~SkinnedMesh()
 {
-	for (uint32_t i = 0; i < m_Textures.size(); i++)
-	{
-		//SAFE_DELETE(m_Textures[i]);
-	}
+	//for (uint32_t i = 0; i < m_Textures.size(); i++)
+	//{
+	//	//SAFE_DELETE(m_Textures[i]);
+	//}
 
 	if (m_Buffers[0] != 0)
 	{
@@ -921,8 +610,9 @@ SkinnedMesh::~SkinnedMesh()
 	m_pScene->~aiScene();
 }
 
-bool SkinnedMesh::LoadMesh(const std::string& Filename)
+bool SkinnedMesh::LoadMesh(const std::string& Filename, uint32_t instanceCount)
 {
+	mInstanceCount = instanceCount;
 	directory = Filename.substr(0, Filename.find_last_of('/'));
 
 	// Create the VAO
@@ -979,17 +669,17 @@ tinystl::vector<Texture> SkinnedMesh::InitMaterials(const aiMaterial* material, 
 		aiString str;
 		material->GetTexture(type, i, &str);
 		// check if texture was loaded before and if so, continue to next iteration: skip loading a new texture
-		//bool skip = false;
-		//for (unsigned int j = 0; j < textures_loaded.size(); j++)
-		//{
-		//	if (std::strcmp(textures_loaded[j].path.data(), str.C_Str()) == 0)
-		//	{
-		//		textures.push_back(textures_loaded[j]);
-		//		skip = true; // a texture with the same filepath has already been loaded, continue to next one. (optimization)
-		//		break;
-		//	}
-		//}
-		//if (!skip)
+		bool skip = false;
+		for (unsigned int j = 0; j < textures_loaded.size(); j++)
+		{
+			if (std::strcmp(textures_loaded[j].path.data(), str.C_Str()) == 0)
+			{
+				textures.push_back(textures_loaded[j]);
+				skip = true; // a texture with the same filepath has already been loaded, continue to next one. (optimization)
+				break;
+			}
+		}
+		if (!skip)
 		{   // if texture hasn't been loaded already, load it
 			Texture texture;
 			std::string fullPath = this->directory + "/" + str.C_Str();
@@ -997,7 +687,7 @@ tinystl::vector<Texture> SkinnedMesh::InitMaterials(const aiMaterial* material, 
 			texture.type = typeName;
 			texture.path = str.C_Str();
 			textures.push_back(texture);
-			//textures_loaded.push_back(texture);  // store it as texture loaded for entire model, to ensure we won't unnecesery load duplicate textures.
+			textures_loaded.push_back(texture);  // store it as texture loaded for entire model, to ensure we won't unnecesery load duplicate textures.
 		}
 	}
 	return textures;
@@ -1043,32 +733,26 @@ bool SkinnedMesh::InitFromScene(const aiScene* pScene, const std::string& Filena
 		InitMesh(i, paiMesh, Positions, Normals, TexCoords, Bones, Indices);
 	}
 
-	// TO DO
-	/*if (!InitMaterials(pScene, Filename))
+	for (uint32_t i = 0; i < pScene->mNumMeshes; ++i)
 	{
-		return false;
-	}*/
-	for (uint32_t i = 0; i < pScene->mNumMaterials; ++i)
-	{
-		const aiMaterial* material = pScene->mMaterials[i];
+		aiMesh* mesh = pScene->mMeshes[i];
+		uint32_t materialIndex = mesh->mMaterialIndex;
+		aiMaterial* material = pScene->mMaterials[materialIndex];
+		tinystl::vector<Texture> textures;
 
-		// 1. diffuse maps
 		tinystl::vector<Texture> diffuseMaps = InitMaterials(material, aiTextureType_DIFFUSE, "texture_diffuse");
-		m_Textures.insert(m_Textures.end(), diffuseMaps.begin(), diffuseMaps.end());
-		//m_Textures[i] = diffuseMaps[0];
-	/*
-		// 2. specular maps
+		textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
+
 		tinystl::vector<Texture> specularMaps = InitMaterials(material, aiTextureType_SPECULAR, "texture_specular");
-		m_Textures.insert(m_Textures.end(), specularMaps.begin(), specularMaps.end());
-		
-		// 3. normal maps
+		textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
+
 		tinystl::vector<Texture> normalMaps = InitMaterials(material, aiTextureType_HEIGHT, "texture_normal");
-		m_Textures.insert(m_Textures.end(), normalMaps.begin(), normalMaps.end());
-		
-		// 4. height maps
+		textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
+
 		tinystl::vector<Texture> heightMaps = InitMaterials(material, aiTextureType_AMBIENT, "texture_height");
-		m_Textures.insert(m_Textures.end(), heightMaps.begin(), heightMaps.end());
-	*/
+		textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
+
+		mMeshTexturesMap[materialIndex] = textures;
 	}
 
 	// Generate and populate the buffers with vertex attributes and the indices
@@ -1096,6 +780,31 @@ bool SkinnedMesh::InitFromScene(const aiScene* pScene, const std::string& Filena
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_Buffers[INDEX_BUFFER]);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Indices[0]) * Indices.size(), &Indices[0], GL_STATIC_DRAW);
+
+	if (mInstanceCount != 0)
+	{
+		glGenBuffers(1, &instanceVBO);
+		glBindBuffer(GL_ARRAY_BUFFER, instanceVBO); // this attribute comes from a different vertex buffer
+
+		glEnableVertexAttribArray(5);
+		glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void*)0);
+		glVertexAttribDivisor(5, 1); // tell OpenGL this is an instanced vertex attribute.
+
+		glEnableVertexAttribArray(6);
+		glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void*)(4 * sizeof(float)));
+		glVertexAttribDivisor(6, 1); // tell OpenGL this is an instanced vertex attribute.
+
+		glEnableVertexAttribArray(7);
+		glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void*)(8 * sizeof(float)));
+		glVertexAttribDivisor(7, 1); // tell OpenGL this is an instanced vertex attribute.
+
+		glEnableVertexAttribArray(8);
+		glVertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), (void*)(12 * sizeof(float)));
+		glVertexAttribDivisor(8, 1); // tell OpenGL this is an instanced vertex attribute.
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+	}
+	glBindVertexArray(0);
 
 	return glGetError();
 }
@@ -1167,30 +876,65 @@ void SkinnedMesh::LoadBones(uint32_t MeshIndex, const aiMesh* pMesh, tinystl::ve
 	}
 }
 
-void SkinnedMesh::Render()
+void SkinnedMesh::Render(ShaderProgram shader)
 {
 	glBindVertexArray(m_VAO);
 
 	for (uint32_t i = 0; i < m_Entries.size(); i++)
 	{
 		const uint32_t MaterialIndex = m_Entries[i].MaterialIndex;
+		tinystl::unordered_map<uint32_t, tinystl::vector<Texture>>::iterator itr = mMeshTexturesMap.find(MaterialIndex);
 
-		if(m_Textures.size() > 0)
+		if (itr != mMeshTexturesMap.end())
 		{
-			//assert(MaterialIndex < m_Textures.size());
+			tinystl::vector<Texture>& textures = itr->second;
 
-			//if (m_Textures[MaterialIndex]) {
-				//m_Textures[MaterialIndex]->Bind(GL_TEXTURE0); TO DO
-				glActiveTexture(GL_TEXTURE0);
-				glBindTexture(GL_TEXTURE_2D, m_Textures[MaterialIndex].id);
-			//}
+			// bind appropriate textures
+			unsigned int diffuseNr = 1;
+			unsigned int specularNr = 1;
+			unsigned int normalNr = 1;
+			unsigned int heightNr = 1;
+			for (unsigned int i = 0; i < textures.size(); i++)
+			{
+				glActiveTexture(GL_TEXTURE0 + i); // active proper texture unit before binding
+				// retrieve texture number (the N in diffuse_textureN)
+				std::string number;
+				std::string name = textures[i].type;
+				if (name == "texture_diffuse")
+					number = std::to_string(diffuseNr++).c_str();
+				else if (name == "texture_specular")
+					number = std::to_string(specularNr++).c_str(); // transfer unsigned int to stream
+				else if (name == "texture_normal")
+					number = std::to_string(normalNr++).c_str(); // transfer unsigned int to stream
+				else if (name == "texture_height")
+					number = std::to_string(heightNr++).c_str(); // transfer unsigned int to stream
+
+														 // now set the sampler to the correct texture unit
+				//glUniform1i(glGetUniformLocation(shader.mID, (name + number).c_str()), i);
+				
+				shader.SetUniform((name + number).c_str(), &i);
+				// and finally bind the texture
+				glBindTexture(GL_TEXTURE_2D, textures[i].id);
+			}
 		}
 
-		glDrawElementsBaseVertex(GL_TRIANGLES,
-			m_Entries[i].NumIndices,
-			GL_UNSIGNED_INT,
-			(void*)(sizeof(uint32_t) * m_Entries[i].BaseIndex),
-			m_Entries[i].BaseVertex);
+		if (mInstanceCount != 0)
+		{
+			glDrawElementsInstancedBaseVertex(GL_TRIANGLES,
+				m_Entries[i].NumIndices,
+				GL_UNSIGNED_INT,
+				(void*)(sizeof(uint32_t) * m_Entries[i].BaseIndex),
+				mInstanceCount,
+				m_Entries[i].BaseVertex);
+		}
+		else
+		{
+			glDrawElementsBaseVertex(GL_TRIANGLES,
+				m_Entries[i].NumIndices,
+				GL_UNSIGNED_INT,
+				(void*)(sizeof(uint32_t) * m_Entries[i].BaseIndex),
+				m_Entries[i].BaseVertex);
+		}
 	}
 
 	// Make sure the VAO is not changed from the outside    

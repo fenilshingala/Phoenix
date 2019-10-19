@@ -11,7 +11,7 @@ public:
 	void Draw(ShaderProgram program);
 
 	const char* filepath;
-	Model* pModel = NULL;
+	SkinnedMesh* pModel = NULL;
 END
 
 

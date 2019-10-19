@@ -232,7 +232,8 @@ void Run()
 	// load models
 	// -----------
 #if SCENE_SPONZA
-	Model myModel("../../Phoenix/RendererOpenGL/App/Resources/Objects/sponza/sponza.obj", false);
+	SkinnedMesh myModel;
+	myModel.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/sponza/sponza.obj");
 
 	glUseProgram(shaderGeometryPass.mId);
 	glm::mat4 model = glm::mat4(1.0f);
@@ -244,7 +245,8 @@ void Run()
 #endif
 
 #if SCENE_NANOSUIT
-	Model myModel("../../Phoenix/RendererOpenGL/App/Resources/Objects/nanosuit/nanosuit.obj", false, 9);
+	SkinnedMesh myModel;
+	myModel.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/nanosuit/nanosuit.obj", 9);
 	tinystl::vector<glm::vec3> objectPositions;
 	objectPositions.push_back(glm::vec3(-3.0, -3.0, -3.0));
 	objectPositions.push_back(glm::vec3(0.0, -3.0, -3.0));
@@ -368,7 +370,7 @@ void Run()
 		glUseProgram(shaderGeometryPass.mId);
 		shaderGeometryPass.SetUniform("projection", &projection);
 		shaderGeometryPass.SetUniform("view", &view);
-		myModel.Draw(shaderGeometryPass);
+		myModel.Render(shaderGeometryPass);
 		
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 

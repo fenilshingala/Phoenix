@@ -50,15 +50,13 @@ void Run()
 	OpenGLRenderer* pOpenglRenderer = new OpenGLRenderer();
 
 	SkinnedMesh mesh;
-	//mesh.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/guard/boblampclean.md5mesh");
+	mesh.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/guard/boblampclean.md5mesh");
 	//mesh.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/nanosuit/nanosuit.obj");
-	mesh.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/Jumping.fbx");
-	mesh.AddAnimation("../../Phoenix/RendererOpenGL/App/Resources/Objects/Walking.fbx");
+	//mesh.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/Jumping.fbx");
+	//mesh.AddAnimation("../../Phoenix/RendererOpenGL/App/Resources/Objects/Walking.fbx");
 	//mesh.AddAnimation("../../Phoenix/RendererOpenGL/App/Resources/Objects/Hip Hop Dancing.fbx");
 
 	glUseProgram(skinningShader.mId);
-	int zero = 0;
-	skinningShader.SetUniform("gColorMap", &zero);
 	skinningShader.SetUniform("isAnim", &mesh.mIsAnim);
 
 	window.initGui();
@@ -119,9 +117,9 @@ void Run()
 			model = glm::mat4(1.0f);
 			model = glm::translate(model, glm::vec3(0.0f, -1.0f, 0.0f));
 			// for guard
-			/*model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-			model = glm::scale(model, glm::vec3(0.05f, 0.05f, 0.05f));*/
-			model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
+			model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+			model = glm::scale(model, glm::vec3(0.05f, 0.05f, 0.05f));
+			//model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
 
 			if (!drawJoints && !drawBones)
 			{
@@ -139,7 +137,7 @@ void Run()
 				skinningShader.SetUniform("view", &view);
 				skinningShader.SetUniform("model", &model);
 
-				mesh.Render();
+				mesh.Render(skinningShader);
 			}
 
 

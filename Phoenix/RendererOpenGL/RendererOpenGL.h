@@ -38,23 +38,9 @@ public:
 	std::unordered_map<size_t, Uniform> mUniformVarMap;
 };
 
+
 /////////////////////
-// MESH
-
-struct Vertex
-{
-	// position
-	glm::vec3 Position;
-	// normal
-	glm::vec3 Normal;
-	// texCoords
-	glm::vec2 TexCoords;
-	// tangent
-	glm::vec3 Tangent;
-	// bitangent
-	glm::vec3 Bitangent;
-};
-
+// SKINNED MESH
 struct Texture
 {
 	unsigned int id;
@@ -62,73 +48,6 @@ struct Texture
 	std::string path;
 };
 
-class Mesh {
-public:
-	/*  Mesh Data  */
-	tinystl::vector<Vertex> vertices;
-	tinystl::vector<unsigned int> indices;
-	tinystl::vector<Texture> textures;
-	unsigned int VAO;
-
-	/*  Functions  */
-	// constructor
-	Mesh(tinystl::vector<Vertex> vertices, tinystl::vector<unsigned int> indices, tinystl::vector<Texture> textures, uint32_t instanceCount = 0, unsigned int instanceVBO = 0);
-
-	// render the mesh
-	void Draw(ShaderProgram shader);
-
-private:
-	/*  Render data  */
-	unsigned int VBO, EBO;
-	uint32_t meshInstanceCount = 0;
-
-	/*  Functions    */
-	// initializes all the buffer objects/arrays
-	void SetupMesh(uint32_t instanceCount, unsigned int instanceVBO);
-};
-
-
-/////////////////////
-// MODEL
-
-class Model
-{
-public:
-	/*  Model Data */
-	tinystl::vector<Texture> textures_loaded;	// stores all the textures loaded so far, optimization to make sure textures aren't loaded more than once.
-	tinystl::vector<Mesh> meshes;
-	std::string directory;
-	bool gammaCorrection;
-
-	/*  Functions   */
-	// constructor, expects a filepath to a 3D model.
-	Model(std::string const &path, bool gamma, uint32_t instanceCount = 0);
-
-	// draws the model, and thus all its meshes
-	void Draw(ShaderProgram shader);
-
-	unsigned int instanceVBO;
-
-private:
-	uint32_t instanceCount = 0;
-
-	/*  Functions   */
-	// loads a model with supported ASSIMP extensions from file and stores the resulting meshes in the meshes vector.
-	void loadModel(std::string const &path);
-
-	// processes a node in a recursive fashion. Processes each individual mesh located at the node and repeats this process on its children nodes (if any).
-	void processNode(aiNode *node, const aiScene *scene);
-
-	Mesh processMesh(aiMesh *mesh, const aiScene *scene);
-
-	// checks all material textures of a given type and loads the textures if they're not loaded yet.
-	// the required info is returned as a Texture struct.
-	tinystl::vector<Texture> loadMaterialTextures(aiMaterial *mat, aiTextureType type, std::string typeName);
-};
-
-
-/////////////////////
-// SKINNED MESH
 class SkinnedMesh
 {
 public:
@@ -136,10 +55,10 @@ public:
 
 	~SkinnedMesh();
 
-	bool LoadMesh(const std::string& Filename);
+	bool LoadMesh(const std::string& Filename, uint32_t instanceCount = 0);
 	void AddAnimation(const std::string& Filename);
 
-	void Render();
+	void Render(ShaderProgram shader);
 
 	uint32_t NumBones() const
 	{
@@ -163,11 +82,13 @@ public:
 	void SetCurrentAnimation(int& index);
 
 	bool mIsAnim = false;
+	unsigned int instanceVBO;
 
 private:
 	int mCurrentAnimationIndex = 0;
 
 	std::string directory;
+	tinystl::vector<Texture> textures_loaded;
 	tinystl::vector<Texture> InitMaterials(const aiMaterial* material, aiTextureType type, std::string typeName);
 
 #define NUM_BONES_PER_VEREX 4
@@ -237,6 +158,8 @@ private:
 
 	uint32_t m_VAO;
 	uint32_t m_Buffers[NUM_VBs];
+	uint32_t mInstanceCount = 0;
+
 
 	struct MeshEntry {
 		MeshEntry()
@@ -254,7 +177,8 @@ private:
 	};
 
 	tinystl::vector<MeshEntry> m_Entries;
-	tinystl::vector<Texture> m_Textures;
+	//tinystl::vector<Texture> m_Textures;
+	tinystl::unordered_map<uint32_t, tinystl::vector<Texture>> mMeshTexturesMap;
 
 	std::unordered_map<std::string, uint32_t> m_BoneMapping; // maps a bone name to its index
 	uint32_t m_NumBones;
@@ -324,7 +248,6 @@ private:
 };
 
 uint32_t LoadTexture(const char*);
-Model* LoadModel(const char*, bool, uint32_t instanceCount = 0);
 
 void BindQuadVAO();
 void BindCubeVAO();
