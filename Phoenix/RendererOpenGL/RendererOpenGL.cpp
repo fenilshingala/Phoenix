@@ -11,6 +11,8 @@
 #include <iostream>
 #include "../../Common/Thirdparty/TINYSTL/unordered_map.h"
 
+#include "Quaternion.h"
+
 //////////////////////////////////////////////////////////
 // CAMERA
 
@@ -665,6 +667,28 @@ tinystl::vector<Texture> Model::loadMaterialTextures(aiMaterial *mat, aiTextureT
 
 
 //////////////////////////////////////////////// QUAD
+unsigned int mLineVAO = 0;
+unsigned int mLineVBO = 0;
+float lineVertices[] = {
+	// positions       
+	0.0f, 0.0f, 0.0f,
+	1.0f, 0.0f, 0.0f
+};
+
+void setupLine()
+{
+	// setup plane VAO
+	glGenVertexArrays(1, &mLineVAO);
+	glGenBuffers(1, &mLineVBO);
+	glBindVertexArray(mLineVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, mLineVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(lineVertices), &lineVertices, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+}
+
+
+//////////////////////////////////////////////// QUAD
 unsigned int mQuadVAO = 0;
 unsigned int mQuadVBO = 0;
 float quadVertices[] = {
@@ -761,6 +785,7 @@ void setupCube()
 
 OpenGLRenderer::OpenGLRenderer()
 {
+	setupLine();
 	setupQuad();
 	setupCube();
 }
@@ -777,6 +802,13 @@ OpenGLRenderer::~OpenGLRenderer()
 
 	glDeleteVertexArrays(1, &mQuadVAO);
 	glDeleteVertexArrays(1, &mCubeVAO);
+}
+
+void OpenGLRenderer::RenderLine()
+{
+	glBindVertexArray(mLineVAO);
+	glDrawArrays(GL_LINES, 0, 2);
+	glBindVertexArray(0);
 }
 
 void BindQuadVAO()
@@ -815,4 +847,567 @@ void OpenGLRenderer::RenderCubeInstanced(int numOfInstances)
 	glBindVertexArray(mCubeVAO);
 	glDrawArraysInstanced(GL_TRIANGLES, 0, 36, numOfInstances);
 	glBindVertexArray(0);
+}
+
+glm::mat4 OpenGLRenderer::ModelMatForLineBWTwoPoints(glm::vec3 A, glm::vec3 B)
+{
+	float scale = glm::distance(A, B);
+	glm::mat4 rot = glm::mat4(1.0f);
+	// Calculate angles using the direction vector
+	glm::vec3 dir = B - A;
+	dir.z *= -1.0f;
+	double y = atan2(dir.z, sqrt(dir.x*dir.x + dir.y*dir.y));
+	double z = atan2(dir.y, dir.x);
+	rot = glm::mat4_cast(glm::quat(glm::vec3(0, y, z)));
+
+	// world space
+	if (scale == 0)
+		return glm::mat4(0.0f);
+
+	return glm::translate(glm::mat4(1.0f), glm::vec3(A)) * rot * glm::scale(glm::mat4(1.0f), glm::vec3(scale, scale, scale));
+}
+
+
+#define POSITION_LOCATION    0
+#define TEX_COORD_LOCATION   1
+#define NORMAL_LOCATION      2
+#define BONE_ID_LOCATION     3
+#define BONE_WEIGHT_LOCATION 4
+
+void SkinnedMesh::VertexBoneData::AddBoneData(uint32_t BoneID, float Weight)
+{
+ 	uint32_t size = sizeof(IDs) / sizeof(IDs[0]);
+	for (uint32_t i = 0; i < size; i++)
+	{
+		if (Weights[i] == 0.0)
+		{
+			IDs[i] = BoneID;
+			Weights[i] = Weight;
+			return;
+		}
+	}
+
+	// should never get here - more bones than we have space for
+	assert(0);
+}
+
+SkinnedMesh::SkinnedMesh()
+{
+	m_VAO = 0;
+	memset(m_Buffers, 0, sizeof(m_Buffers) / sizeof(m_Buffers[0]));
+	m_NumBones = 0;
+	m_pScene = NULL;
+}
+
+
+SkinnedMesh::~SkinnedMesh()
+{
+	for (uint32_t i = 0; i < m_Textures.size(); i++)
+	{
+		//SAFE_DELETE(m_Textures[i]);
+	}
+
+	if (m_Buffers[0] != 0)
+	{
+		glDeleteBuffers(sizeof(m_Buffers) / sizeof(m_Buffers[0]), m_Buffers);
+	}
+
+	if (m_VAO != 0)
+	{
+		glDeleteVertexArrays(1, &m_VAO);
+		m_VAO = 0;
+	}
+
+	m_pScene->~aiScene();
+}
+
+bool SkinnedMesh::LoadMesh(const std::string& Filename)
+{
+	directory = Filename.substr(0, Filename.find_last_of('/'));
+
+	// Create the VAO
+	glGenVertexArrays(1, &m_VAO);
+	glBindVertexArray(m_VAO);
+
+	// Create the buffers for the vertices attributes
+	glGenBuffers(sizeof(m_Buffers) / sizeof(m_Buffers[0]), m_Buffers);
+
+	bool Ret = false;
+
+	m_pScene = m_Importer.ReadFile(Filename.c_str(), aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices);
+	m_pScene = m_Importer.GetOrphanedScene();
+
+	if (m_pScene)
+	{
+		m_GlobalInverseTransform = m_pScene->mRootNode->mTransformation;
+		m_GlobalInverseTransform.Inverse();
+		Ret = InitFromScene(m_pScene, Filename);
+
+		if (m_pScene->mNumAnimations > 0)
+		{
+			mIsAnim = true;
+			mAnimations.push_back(m_pScene->mAnimations[0]);
+		}
+	}
+	else
+	{
+		printf("Error parsing '%s': '%s'\n", Filename.c_str(), m_Importer.GetErrorString());
+	}
+
+	// Make sure the VAO is not changed from the outside
+	glBindVertexArray(0);
+
+	return Ret;
+}
+
+void SkinnedMesh::AddAnimation(const std::string& Filename)
+{
+	const aiScene* anim = m_Importer.ReadFile(Filename.c_str(), aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices);
+	anim = m_Importer.GetOrphanedScene();
+	if (anim->mNumAnimations > 0)
+	{
+		mIsAnim = true;
+		mAnimations.push_back(anim->mAnimations[0]);
+	}
+}
+
+tinystl::vector<Texture> SkinnedMesh::InitMaterials(const aiMaterial* material, aiTextureType type, std::string typeName)
+{
+	tinystl::vector<Texture> textures;
+	for (unsigned int i = 0; i < material->GetTextureCount(type); i++)
+	{
+		aiString str;
+		material->GetTexture(type, i, &str);
+		// check if texture was loaded before and if so, continue to next iteration: skip loading a new texture
+		//bool skip = false;
+		//for (unsigned int j = 0; j < textures_loaded.size(); j++)
+		//{
+		//	if (std::strcmp(textures_loaded[j].path.data(), str.C_Str()) == 0)
+		//	{
+		//		textures.push_back(textures_loaded[j]);
+		//		skip = true; // a texture with the same filepath has already been loaded, continue to next one. (optimization)
+		//		break;
+		//	}
+		//}
+		//if (!skip)
+		{   // if texture hasn't been loaded already, load it
+			Texture texture;
+			std::string fullPath = this->directory + "/" + str.C_Str();
+			texture.id = LoadTexture(fullPath.c_str());
+			texture.type = typeName;
+			texture.path = str.C_Str();
+			textures.push_back(texture);
+			//textures_loaded.push_back(texture);  // store it as texture loaded for entire model, to ensure we won't unnecesery load duplicate textures.
+		}
+	}
+	return textures;
+}
+
+bool SkinnedMesh::InitFromScene(const aiScene* pScene, const std::string& Filename)
+{
+	m_Entries.resize(pScene->mNumMeshes);
+	//m_Textures.resize(pScene->mNumMaterials);
+
+	tinystl::vector<aiVector3D> Positions;
+	tinystl::vector<aiVector3D> Normals;
+	tinystl::vector<aiVector2D> TexCoords;
+	tinystl::vector<VertexBoneData> Bones;
+	tinystl::vector<uint32_t> Indices;
+
+	uint32_t NumVertices = 0;
+	uint32_t NumIndices = 0;
+
+	// Count the number of vertices and indices
+	for (uint32_t i = 0; i < m_Entries.size(); i++)
+	{
+		m_Entries[i].MaterialIndex = pScene->mMeshes[i]->mMaterialIndex;
+		m_Entries[i].NumIndices = pScene->mMeshes[i]->mNumFaces * 3;
+		m_Entries[i].BaseVertex = NumVertices;
+		m_Entries[i].BaseIndex = NumIndices;
+
+		NumVertices += pScene->mMeshes[i]->mNumVertices;
+		NumIndices += m_Entries[i].NumIndices;
+	}
+
+	// Reserve space in the vectors for the vertex attributes and indices
+	Positions.reserve(NumVertices);
+	Normals.reserve(NumVertices);
+	TexCoords.reserve(NumVertices);
+	Bones.resize(NumVertices);
+	Indices.reserve(NumIndices);
+
+	// Initialize the meshes in the scene one by one
+	for (uint32_t i = 0; i < m_Entries.size(); i++)
+	{
+		const aiMesh* paiMesh = pScene->mMeshes[i];
+		InitMesh(i, paiMesh, Positions, Normals, TexCoords, Bones, Indices);
+	}
+
+	// TO DO
+	/*if (!InitMaterials(pScene, Filename))
+	{
+		return false;
+	}*/
+	for (uint32_t i = 0; i < pScene->mNumMaterials; ++i)
+	{
+		const aiMaterial* material = pScene->mMaterials[i];
+
+		// 1. diffuse maps
+		tinystl::vector<Texture> diffuseMaps = InitMaterials(material, aiTextureType_DIFFUSE, "texture_diffuse");
+		m_Textures.insert(m_Textures.end(), diffuseMaps.begin(), diffuseMaps.end());
+		//m_Textures[i] = diffuseMaps[0];
+	/*
+		// 2. specular maps
+		tinystl::vector<Texture> specularMaps = InitMaterials(material, aiTextureType_SPECULAR, "texture_specular");
+		m_Textures.insert(m_Textures.end(), specularMaps.begin(), specularMaps.end());
+		
+		// 3. normal maps
+		tinystl::vector<Texture> normalMaps = InitMaterials(material, aiTextureType_HEIGHT, "texture_normal");
+		m_Textures.insert(m_Textures.end(), normalMaps.begin(), normalMaps.end());
+		
+		// 4. height maps
+		tinystl::vector<Texture> heightMaps = InitMaterials(material, aiTextureType_AMBIENT, "texture_height");
+		m_Textures.insert(m_Textures.end(), heightMaps.begin(), heightMaps.end());
+	*/
+	}
+
+	// Generate and populate the buffers with vertex attributes and the indices
+	glBindBuffer(GL_ARRAY_BUFFER, m_Buffers[POS_VB]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(Positions[0]) * Positions.size(), &Positions[0], GL_STATIC_DRAW);
+	glEnableVertexAttribArray(POSITION_LOCATION);
+	glVertexAttribPointer(POSITION_LOCATION, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glBindBuffer(GL_ARRAY_BUFFER, m_Buffers[TEXCOORD_VB]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(TexCoords[0]) * TexCoords.size(), &TexCoords[0], GL_STATIC_DRAW);
+	glEnableVertexAttribArray(TEX_COORD_LOCATION);
+	glVertexAttribPointer(TEX_COORD_LOCATION, 2, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glBindBuffer(GL_ARRAY_BUFFER, m_Buffers[NORMAL_VB]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(Normals[0]) * Normals.size(), &Normals[0], GL_STATIC_DRAW);
+	glEnableVertexAttribArray(NORMAL_LOCATION);
+	glVertexAttribPointer(NORMAL_LOCATION, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glBindBuffer(GL_ARRAY_BUFFER, m_Buffers[BONE_VB]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(Bones[0]) * Bones.size(), &Bones[0], GL_STATIC_DRAW);
+	glEnableVertexAttribArray(BONE_ID_LOCATION);
+	glVertexAttribIPointer(BONE_ID_LOCATION, 4, GL_INT, sizeof(VertexBoneData), (const GLvoid*)0);
+	glEnableVertexAttribArray(BONE_WEIGHT_LOCATION);
+	glVertexAttribPointer(BONE_WEIGHT_LOCATION, 4, GL_FLOAT, GL_FALSE, sizeof(VertexBoneData), (const GLvoid*)16);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_Buffers[INDEX_BUFFER]);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Indices[0]) * Indices.size(), &Indices[0], GL_STATIC_DRAW);
+
+	return glGetError();
+}
+
+void SkinnedMesh::InitMesh(uint32_t MeshIndex,
+	const aiMesh* paiMesh,
+	tinystl::vector<aiVector3D>& Positions,
+	tinystl::vector<aiVector3D>& Normals,
+	tinystl::vector<aiVector2D>& TexCoords,
+	tinystl::vector<VertexBoneData>& Bones,
+	tinystl::vector<uint32_t>& Indices)
+{
+	const aiVector3D Zero3D(0.0f, 0.0f, 0.0f);
+
+	// Populate the vertex attribute vectors
+	for (uint32_t i = 0; i < paiMesh->mNumVertices; i++)
+	{
+		const aiVector3D* pPos = &(paiMesh->mVertices[i]);
+		const aiVector3D* pNormal = &(paiMesh->mNormals[i]);
+		const aiVector3D* pTexCoord = paiMesh->HasTextureCoords(0) ? &(paiMesh->mTextureCoords[0][i]) : &Zero3D;
+
+		Positions.push_back(aiVector3D(pPos->x, pPos->y, pPos->z));
+		Normals.push_back(aiVector3D(pNormal->x, pNormal->y, pNormal->z));
+		TexCoords.push_back(aiVector2D(pTexCoord->x, pTexCoord->y));
+	}
+
+	LoadBones(MeshIndex, paiMesh, Bones);
+
+	// Populate the index buffer
+	for (uint32_t i = 0; i < paiMesh->mNumFaces; i++)
+	{
+		const aiFace& Face = paiMesh->mFaces[i];
+		assert(Face.mNumIndices == 3);
+		Indices.push_back(Face.mIndices[0]);
+		Indices.push_back(Face.mIndices[1]);
+		Indices.push_back(Face.mIndices[2]);
+	}
+}
+
+
+void SkinnedMesh::LoadBones(uint32_t MeshIndex, const aiMesh* pMesh, tinystl::vector<VertexBoneData>& Bones)
+{
+	for (uint32_t i = 0; i < pMesh->mNumBones; i++)
+	{
+		uint32_t BoneIndex = 0;
+		std::string BoneName(pMesh->mBones[i]->mName.data);
+		
+		if (m_BoneMapping.find(BoneName) == m_BoneMapping.end())
+		{
+			// Allocate an index for a new bone
+			BoneIndex = m_NumBones;
+			m_NumBones++;
+			BoneInfo bi;
+			m_BoneInfo.push_back(bi);
+			m_BoneInfo[BoneIndex].BoneOffset = pMesh->mBones[i]->mOffsetMatrix;
+			m_BoneMapping[BoneName] = BoneIndex;
+		}
+		else
+		{
+			BoneIndex = m_BoneMapping[BoneName];
+		}
+
+		for (uint32_t j = 0; j < pMesh->mBones[i]->mNumWeights; j++)
+		{
+			uint32_t VertexID = m_Entries[MeshIndex].BaseVertex + pMesh->mBones[i]->mWeights[j].mVertexId;
+			float Weight = pMesh->mBones[i]->mWeights[j].mWeight;
+			Bones[VertexID].AddBoneData(BoneIndex, Weight);
+		}
+	}
+}
+
+void SkinnedMesh::Render()
+{
+	glBindVertexArray(m_VAO);
+
+	for (uint32_t i = 0; i < m_Entries.size(); i++)
+	{
+		const uint32_t MaterialIndex = m_Entries[i].MaterialIndex;
+
+		if(m_Textures.size() > 0)
+		{
+			//assert(MaterialIndex < m_Textures.size());
+
+			//if (m_Textures[MaterialIndex]) {
+				//m_Textures[MaterialIndex]->Bind(GL_TEXTURE0); TO DO
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, m_Textures[MaterialIndex].id);
+			//}
+		}
+
+		glDrawElementsBaseVertex(GL_TRIANGLES,
+			m_Entries[i].NumIndices,
+			GL_UNSIGNED_INT,
+			(void*)(sizeof(uint32_t) * m_Entries[i].BaseIndex),
+			m_Entries[i].BaseVertex);
+	}
+
+	// Make sure the VAO is not changed from the outside    
+	glBindVertexArray(0);
+}
+
+
+uint32_t SkinnedMesh::FindPosition(float AnimationTime, const aiNodeAnim* pNodeAnim)
+{
+	for (uint32_t i = 0; i < pNodeAnim->mNumPositionKeys - 1; i++)
+	{
+		if (AnimationTime < (float)pNodeAnim->mPositionKeys[i + 1].mTime)
+		{
+			return i;
+		}
+	}
+
+	assert(0);
+
+	return 0;
+}
+
+
+uint32_t SkinnedMesh::FindRotation(float AnimationTime, const aiNodeAnim* pNodeAnim)
+{
+	assert(pNodeAnim->mNumRotationKeys > 0);
+
+	for (uint32_t i = 0; i < pNodeAnim->mNumRotationKeys - 1; i++)
+	{
+		if (AnimationTime < (float)pNodeAnim->mRotationKeys[i + 1].mTime)
+		{
+			return i;
+		}
+	}
+
+	assert(0);
+
+	return 0;
+}
+
+
+uint32_t SkinnedMesh::FindScaling(float AnimationTime, const aiNodeAnim* pNodeAnim)
+{
+	assert(pNodeAnim->mNumScalingKeys > 0);
+
+	for (uint32_t i = 0; i < pNodeAnim->mNumScalingKeys - 1; i++)
+	{
+		if (AnimationTime < (float)pNodeAnim->mScalingKeys[i + 1].mTime) {
+			return i;
+		}
+	}
+
+	assert(0);
+
+	return 0;
+}
+
+
+void SkinnedMesh::CalcInterpolatedPosition(aiVector3D& Out, float AnimationTime, const aiNodeAnim* pNodeAnim)
+{
+	if (pNodeAnim->mNumPositionKeys == 1) {
+		Out = pNodeAnim->mPositionKeys[0].mValue;
+		return;
+	}
+
+	uint32_t PositionIndex = FindPosition(AnimationTime, pNodeAnim);
+	uint32_t NextPositionIndex = (PositionIndex + 1);
+	assert(NextPositionIndex < pNodeAnim->mNumPositionKeys);
+	float DeltaTime = (float)(pNodeAnim->mPositionKeys[NextPositionIndex].mTime - pNodeAnim->mPositionKeys[PositionIndex].mTime);
+	float Factor = (AnimationTime - (float)pNodeAnim->mPositionKeys[PositionIndex].mTime) / DeltaTime;
+	assert(Factor >= 0.0f && Factor <= 1.0f);
+	const aiVector3D& Start = pNodeAnim->mPositionKeys[PositionIndex].mValue;
+	const aiVector3D& End = pNodeAnim->mPositionKeys[NextPositionIndex].mValue;
+	aiVector3D Delta = End - Start;
+	Out = Start + Factor * Delta;
+}
+
+
+void SkinnedMesh::CalcInterpolatedRotation(Quaternion& Out, float AnimationTime, const aiNodeAnim* pNodeAnim)
+{
+	// we need at least two values to interpolate...
+	if (pNodeAnim->mNumRotationKeys == 1) {
+		Out = pNodeAnim->mRotationKeys[0].mValue;
+		return;
+	}
+
+	uint32_t RotationIndex = FindRotation(AnimationTime, pNodeAnim);
+	uint32_t NextRotationIndex = (RotationIndex + 1);
+	assert(NextRotationIndex < pNodeAnim->mNumRotationKeys);
+	float DeltaTime = (float)(pNodeAnim->mRotationKeys[NextRotationIndex].mTime - pNodeAnim->mRotationKeys[RotationIndex].mTime);
+	float Factor = (AnimationTime - (float)pNodeAnim->mRotationKeys[RotationIndex].mTime) / DeltaTime;
+	assert(Factor >= 0.0f && Factor <= 1.0f);
+	const Quaternion& StartRotationQ = pNodeAnim->mRotationKeys[RotationIndex].mValue;
+	const Quaternion& EndRotationQ = pNodeAnim->mRotationKeys[NextRotationIndex].mValue;
+	Out = Quaternion::interpolate(StartRotationQ, EndRotationQ, Factor);
+	Out.Normalize();
+}
+
+
+void SkinnedMesh::CalcInterpolatedScaling(aiVector3D& Out, float AnimationTime, const aiNodeAnim* pNodeAnim)
+{
+	if (pNodeAnim->mNumScalingKeys == 1) {
+		Out = pNodeAnim->mScalingKeys[0].mValue;
+		return;
+	}
+
+	uint32_t ScalingIndex = FindScaling(AnimationTime, pNodeAnim);
+	uint32_t NextScalingIndex = (ScalingIndex + 1);
+	assert(NextScalingIndex < pNodeAnim->mNumScalingKeys);
+	float DeltaTime = (float)(pNodeAnim->mScalingKeys[NextScalingIndex].mTime - pNodeAnim->mScalingKeys[ScalingIndex].mTime);
+	float Factor = (AnimationTime - (float)pNodeAnim->mScalingKeys[ScalingIndex].mTime) / DeltaTime;
+	assert(Factor >= 0.0f && Factor <= 1.0f);
+	const aiVector3D& Start = pNodeAnim->mScalingKeys[ScalingIndex].mValue;
+	const aiVector3D& End = pNodeAnim->mScalingKeys[NextScalingIndex].mValue;
+	aiVector3D Delta = End - Start;
+	Out = Start + Factor * Delta;
+}
+
+
+void SkinnedMesh::ReadNodeHeirarchy(float AnimationTime, const aiNode* pNode, const aiMatrix4x4& ParentTransform)
+{
+	std::string NodeName(pNode->mName.data);
+
+	const aiAnimation* pAnimation = mAnimations[mCurrentAnimationIndex];
+	
+	aiMatrix4x4 NodeTransformation(pNode->mTransformation);
+
+	const aiNodeAnim* pNodeAnim = FindNodeAnim(pAnimation, NodeName);
+
+	if (pNodeAnim)
+	{
+		// Interpolate scaling and generate scaling transformation matrix
+		aiVector3D Scaling;
+		CalcInterpolatedScaling(Scaling, AnimationTime, pNodeAnim);
+		aiMatrix4x4 ScalingM;
+		aiMatrix4x4::Scaling(Scaling, ScalingM);
+
+		// Interpolate rotation and generate rotation transformation matrix
+		Quaternion RotationQ;
+		CalcInterpolatedRotation(RotationQ, AnimationTime, pNodeAnim);
+		aiMatrix4x4 RotationM = RotationQ.toAiRotationMatrix();
+
+		// Interpolate translation and generate translation transformation matrix
+		aiVector3D Translation;
+		CalcInterpolatedPosition(Translation, AnimationTime, pNodeAnim);
+		aiMatrix4x4 TranslationM;
+		aiMatrix4x4::Translation(Translation, TranslationM);
+		
+		// Combine the above transformations
+		NodeTransformation = TranslationM * RotationM * ScalingM;
+	}
+
+	aiMatrix4x4 GlobalTransformation = ParentTransform * NodeTransformation;
+
+	if (m_BoneMapping.find(NodeName) != m_BoneMapping.end())
+	{
+		uint32_t BoneIndex = m_BoneMapping[NodeName];
+		m_BoneInfo[BoneIndex].FinalTransformation = m_GlobalInverseTransform * GlobalTransformation * m_BoneInfo[BoneIndex].BoneOffset;	
+		m_BoneInfo[BoneIndex].m_BoneInverseTransform = m_GlobalInverseTransform * GlobalTransformation;
+		mLineSegments.emplace_back(LineSegment( m_GlobalInverseTransform*ParentTransform, m_BoneInfo[BoneIndex].m_BoneInverseTransform ));
+	}
+	
+	for (uint32_t i = 0; i < pNode->mNumChildren; i++)
+	{
+		ReadNodeHeirarchy(AnimationTime, pNode->mChildren[i], GlobalTransformation);
+	}
+}
+
+
+void SkinnedMesh::BoneTransform(float TimeInSeconds, tinystl::vector<aiMatrix4x4>& Transforms, tinystl::vector<aiMatrix4x4>& BoneTransforms)
+{
+	aiMatrix4x4 Identity;
+
+	float TicksPerSecond = (float)(mAnimations[mCurrentAnimationIndex]->mTicksPerSecond != 0 ? mAnimations[mCurrentAnimationIndex]->mTicksPerSecond : 25.0f);
+	float TimeInTicks = TimeInSeconds * TicksPerSecond;
+	float AnimationTime = fmod(TimeInTicks, (float)mAnimations[mCurrentAnimationIndex]->mDuration);
+
+	mLineSegments.clear();
+	ReadNodeHeirarchy(AnimationTime, m_pScene->mRootNode, Identity);
+
+	Transforms.resize(m_NumBones);
+	BoneTransforms.resize(m_NumBones);
+
+	for (uint32_t i = 0; i < m_NumBones; i++)
+	{
+		Transforms[i] = m_BoneInfo[i].FinalTransformation;
+		BoneTransforms[i] = m_BoneInfo[i].m_BoneInverseTransform;
+	}
+}
+
+const aiNodeAnim* SkinnedMesh::FindNodeAnim(const aiAnimation* pAnimation, const std::string NodeName)
+{
+	for (uint32_t i = 0; i < pAnimation->mNumChannels; i++)
+	{
+		const aiNodeAnim* pNodeAnim = pAnimation->mChannels[i];
+
+		if (std::string(pNodeAnim->mNodeName.data) == NodeName)
+		{
+			return pNodeAnim;
+		}
+	}
+
+	return NULL;
+}
+
+void SkinnedMesh::SetCurrentAnimation(int& index)
+{
+	if (index >= (int)mAnimations.size())
+	{
+		mCurrentAnimationIndex = 0;
+		index = mCurrentAnimationIndex;
+	}
+	else if (index < 0)
+	{
+		mCurrentAnimationIndex = (int)mAnimations.size()-1;
+		index = mCurrentAnimationIndex;
+	}
+	else
+		mCurrentAnimationIndex = index;
 }

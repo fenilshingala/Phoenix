@@ -37,6 +37,9 @@
     <Filter Include="Resource Files\Shaders\ForwardLighting">
       <UniqueIdentifier>{cacc01e1-96bb-4aa8-a748-e6e839e6dc82}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Phoenix\Quaternion">
+      <UniqueIdentifier>{9a45c966-5085-4384-8729-9f698c11eb48}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui.cpp">
@@ -85,6 +88,12 @@
       <Filter>Source Files\Examples</Filter>
     </ClCompile>
     <ClCompile Include="..\RendererOpenGL\App\Physics.cpp">
+      <Filter>Source Files\Examples</Filter>
+    </ClCompile>
+    <ClCompile Include="..\RendererOpenGL\Quaternion.cpp">
+      <Filter>Source Files\Phoenix\Quaternion</Filter>
+    </ClCompile>
+    <ClCompile Include="..\RendererOpenGL\App\Animation.cpp">
       <Filter>Source Files\Examples</Filter>
     </ClCompile>
   </ItemGroup>
@@ -136,6 +145,9 @@
     </ClInclude>
     <ClInclude Include="..\RendererOpenGL\App\Systems\LightingSystem.h">
       <Filter>Source Files\Examples\Systems</Filter>
+    </ClInclude>
+    <ClInclude Include="..\RendererOpenGL\Quaternion.h">
+      <Filter>Source Files\Phoenix\Quaternion</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

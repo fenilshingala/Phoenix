@@ -26,6 +26,7 @@
     <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui_impl_opengl3.cpp" />
     <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui_impl_sdl.cpp" />
     <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="..\RendererOpenGL\App\Animation.cpp" />
     <ClCompile Include="..\RendererOpenGL\App\Components\LightComponent.cpp" />
     <ClCompile Include="..\RendererOpenGL\App\Components\ModelComponent.cpp" />
     <ClCompile Include="..\RendererOpenGL\App\DefferedShading.cpp" />
@@ -33,6 +34,7 @@
     <ClCompile Include="..\RendererOpenGL\App\main.cpp" />
     <ClCompile Include="..\RendererOpenGL\App\Physics.cpp" />
     <ClCompile Include="..\RendererOpenGL\App\Systems\LightingSystem.cpp" />
+    <ClCompile Include="..\RendererOpenGL\Quaternion.cpp" />
     <ClCompile Include="..\RendererOpenGL\RendererOpenGL.cpp" />
     <ClCompile Include="..\RendererOpenGL\Window.cpp" />
   </ItemGroup>
@@ -51,6 +53,7 @@
     <ClInclude Include="..\RendererOpenGL\App\Systems\LightingSystem.h" />
     <ClInclude Include="..\RendererOpenGL\Common.h" />
     <ClInclude Include="..\RendererOpenGL\Picker.h" />
+    <ClInclude Include="..\RendererOpenGL\Quaternion.h" />
     <ClInclude Include="..\RendererOpenGL\RendererOpenGL.h" />
     <ClInclude Include="..\RendererOpenGL\Window.h" />
   </ItemGroup>
