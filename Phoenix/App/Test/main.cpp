@@ -2,7 +2,7 @@
 #include "PositionComponent.h"
 #include "../../../Middleware/ECS/EntityManager.h"
 
-// I am Stud Shingala ..
+// I am Stud Shingala Fenil..
 int main()
 {
 	EntityManager manager;
