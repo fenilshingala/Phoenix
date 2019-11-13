@@ -13,6 +13,7 @@
 
 #include "Quaternion.h"
 
+#pragma region CAMERA
 //////////////////////////////////////////////////////////
 // CAMERA
 
@@ -96,9 +97,14 @@ void Camera::updateCameraVectors()
 	Up = glm::normalize(glm::cross(Right, Front));
 }
 
+#pragma endregion
 
+
+#pragma region OPENGL
 //////////////////////////////////////////////////////////
 // OPENGL 
+
+#pragma region SHADER
 
 std::hash<std::string> hasher;
 
@@ -325,6 +331,9 @@ void ShaderProgram::SetUniform(const char* name, void* data)
 		}
 	}
 }
+
+#pragma endregion
+
 
 uint32_t LoadTexture(const char* path)
 {
@@ -556,6 +565,10 @@ glm::mat4 OpenGLRenderer::ModelMatForLineBWTwoPoints(glm::vec3 A, glm::vec3 B)
 	return glm::translate(glm::mat4(1.0f), glm::vec3(A)) * rot * glm::scale(glm::mat4(1.0f), glm::vec3(scale, scale, scale));
 }
 
+#pragma endregion
+
+
+#pragma region SKINNED_MESH
 
 #define POSITION_LOCATION    0
 #define NORMAL_LOCATION      1
@@ -1155,3 +1168,5 @@ void SkinnedMesh::SetCurrentAnimation(int& index)
 	else
 		mCurrentAnimationIndex = index;
 }
+
+#pragma endregion
