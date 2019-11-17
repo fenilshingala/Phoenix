@@ -249,8 +249,42 @@ private:
 
 uint32_t LoadTexture(const char*);
 
-void BindQuadVAO();
-void BindCubeVAO();
+struct InstanceData
+{
+	glm::mat4 model;
+	glm::vec3 color;
+};
+
+enum PBRTextureType
+{
+	ALBEDO,
+	NORMAL,
+	METALLIC,
+	ROUGHNESS,
+	AO
+};
+
+struct PBRMat_Tex
+{
+	void LoadPBRTexture(const char* filepath, PBRTextureType type);
+	void BindTextures();
+
+private:
+	unsigned int albedo;
+	unsigned int normal;
+	unsigned int metallic;
+	unsigned int roughness;
+	unsigned int ao;
+};
+
+struct PBRMat
+{
+	glm::vec3	albedo;
+	float		normal;
+	float		metallic;
+	float		roughness;
+	float		ao;
+};
 
 class OpenGLRenderer
 {
@@ -259,9 +293,57 @@ public:
 	~OpenGLRenderer();
 
 	void RenderLine();
+
 	void RenderQuad();
 	void RenderQuadInstanced(int numOfInstances);
+	void UpdateQuadInstanceBuffer(uint32_t size, void* data);
+
 	void RenderCube();
+	void UpdateCubeInstanceBuffer(uint32_t size, void* data);
 	void RenderCubeInstanced(int numOfInstances);
+
+	void RenderSphere();
+	void UpdateSphereInstanceBuffer(uint32_t size, void* data);
+	void RenderSphereInstanced(int numOfInstances);
+
 	glm::mat4 ModelMatForLineBWTwoPoints(glm::vec3 A, glm::vec3 B);
+
+private:
+#define INVALID_BUFFER_ID -1
+
+	//////////////////////////////////////////////// INSTANCE VBO
+	void attachInstanceVBO(unsigned int& vbo);
+	void setupBasicShapeBuffers(unsigned int vao, unsigned int instanceVBO);
+
+	//////////////////////////////////////////////// LINE
+	unsigned int mLineVAO = INVALID_BUFFER_ID;
+	unsigned int mLineVBO = INVALID_BUFFER_ID;
+	void setupLine();
+
+	//////////////////////////////////////////////// QUAD
+	unsigned int mQuadVAO = INVALID_BUFFER_ID;
+	unsigned int mQuadVBO = INVALID_BUFFER_ID;
+
+	unsigned int quadInstanceVAO	= INVALID_BUFFER_ID;
+	unsigned int quadInstanceBuffer = INVALID_BUFFER_ID;
+
+	void setupQuad();
+
+	//////////////////////////////////////////////// CUBE
+	unsigned int mCubeVAO = INVALID_BUFFER_ID;
+	unsigned int mCubeVBO = INVALID_BUFFER_ID;
+
+	unsigned int cubeInstanceVAO	= INVALID_BUFFER_ID;
+	unsigned int cubeInstanceBuffer = INVALID_BUFFER_ID;
+	
+	void setupCube();
+
+	//////////////////////////////////////////////// SPHERE
+	unsigned int sphereIndexCount  = INVALID_BUFFER_ID;
+	unsigned int sphereVAO		   = INVALID_BUFFER_ID;
+
+	unsigned int sphereInstanceVAO		= INVALID_BUFFER_ID;
+	unsigned int sphereInstanceBuffer	= INVALID_BUFFER_ID;
+	
+	void setupSphere();
 };

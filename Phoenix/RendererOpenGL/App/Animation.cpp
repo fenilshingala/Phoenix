@@ -99,16 +99,16 @@ void Run()
 			pOpenglRenderer->RenderCube();
 
 			// also draw the lamp object
-			glUseProgram(lampShader.mId);
-
-			lampShader.SetUniform("projection", &projection);
-			lampShader.SetUniform("view", &view);
 			model = glm::mat4(1.0f);
 			model = glm::translate(model, lightPos);
 			model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
+			glm::vec3 color(1.0f, 1.0f, 1.0f);
+			glUseProgram(lampShader.mId);
+			lampShader.SetUniform("projection", &projection);
+			lampShader.SetUniform("view", &view);
 			lampShader.SetUniform("model", &model);
-
-			pOpenglRenderer->RenderCube();
+			lampShader.SetUniform("color", &color);
+			pOpenglRenderer->RenderSphere();
 
 			// skinning
 			tinystl::vector<aiMatrix4x4> Transforms, BoneTransforms;

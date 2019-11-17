@@ -52,6 +52,7 @@ void LightingSystem::AddLights(uint32_t* lights, uint64_t noOfLights)
 	glBufferData(GL_ARRAY_BUFFER, noOfLights * sizeof(instancedData), mInstanceData.data(), GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+	/*
 	BindCubeVAO();
 	{
 		glBindBuffer(GL_ARRAY_BUFFER, instanceVBO); // this attribute comes from a different vertex buffer
@@ -79,4 +80,5 @@ void LightingSystem::AddLights(uint32_t* lights, uint64_t noOfLights)
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
 	glBindVertexArray(0);
+	*/
 }

@@ -363,16 +363,64 @@ uint32_t LoadTexture(const char* path)
 }
 
 
-//////////////////////////////////////////////// QUAD
-unsigned int mLineVAO = 0;
-unsigned int mLineVBO = 0;
+#pragma region BASIC_SHAPES
+
+//////////////////////////////////////////////// INSTANCE VBO
+void OpenGLRenderer::attachInstanceVBO(unsigned int& vbo)
+{
+	//glGenBuffers(1, &vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+	glEnableVertexAttribArray(3);
+	glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, 19 * sizeof(float), (void*)0);
+	glVertexAttribDivisor(3, 1); // tell OpenGL this is an instanced vertex attribute.
+
+	glEnableVertexAttribArray(4);
+	glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 19 * sizeof(float), (void*)(4 * sizeof(float)));
+	glVertexAttribDivisor(4, 1); // tell OpenGL this is an instanced vertex attribute.
+
+	glEnableVertexAttribArray(5);
+	glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 19 * sizeof(float), (void*)(8 * sizeof(float)));
+	glVertexAttribDivisor(5, 1); // tell OpenGL this is an instanced vertex attribute.
+
+	glEnableVertexAttribArray(6);
+	glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 19 * sizeof(float), (void*)(12 * sizeof(float)));
+	glVertexAttribDivisor(6, 1); // tell OpenGL this is an instanced vertex attribute.
+
+	glEnableVertexAttribArray(7);
+	glVertexAttribPointer(7, 3, GL_FLOAT, GL_FALSE, 19 * sizeof(float), (void*)(16 * sizeof(float)));
+	glVertexAttribDivisor(7, 1); // tell OpenGL this is an instanced vertex attribute.
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+void OpenGLRenderer::setupBasicShapeBuffers(unsigned int vao, unsigned int instanceVBO)
+{
+	glBindVertexArray(vao);
+	{
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+
+		if (instanceVBO != INVALID_BUFFER_ID)
+		{
+			attachInstanceVBO(instanceVBO);
+		}
+	}
+	glBindVertexArray(0);
+}
+
+//////////////////////////////////////////////// LINE
 float lineVertices[] = {
 	// positions       
 	0.0f, 0.0f, 0.0f,
 	1.0f, 0.0f, 0.0f
 };
 
-void setupLine()
+void OpenGLRenderer::setupLine()
 {
 	// setup plane VAO
 	glGenVertexArrays(1, &mLineVAO);
@@ -386,35 +434,31 @@ void setupLine()
 
 
 //////////////////////////////////////////////// QUAD
-unsigned int mQuadVAO = 0;
-unsigned int mQuadVBO = 0;
 float quadVertices[] = {
-	// positions        // texture Coords
-	-1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
-	-1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-	 1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
-	 1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+	// positions		// normals		  // texture Coords
+	-1.0f,  1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f,
+	-1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+	 1.0f,  1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
+	 1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
 };
 
-void setupQuad()
+void OpenGLRenderer::setupQuad()
 {
 	// setup plane VAO
 	glGenVertexArrays(1, &mQuadVAO);
 	glGenBuffers(1, &mQuadVBO);
-	glBindVertexArray(mQuadVAO);
 	glBindBuffer(GL_ARRAY_BUFFER, mQuadVBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+	setupBasicShapeBuffers(mQuadVAO, INVALID_BUFFER_ID);
+
+	glGenVertexArrays(1, &quadInstanceVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, mQuadVBO);
+	setupBasicShapeBuffers(quadInstanceVAO, quadInstanceBuffer);
 }
 
 
 //////////////////////////////////////////////// CUBE
-unsigned int mCubeVAO = 0;
-unsigned int mCubeVBO = 0;
-float vertices[] = {
+float cubeVertices[] = {
 	// Position			  Normals			  TexCoords
 	// back face
 	-1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
@@ -460,37 +504,153 @@ float vertices[] = {
 	-1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 0.0f  // bottom-left        
 };
 
-void setupCube()
+void OpenGLRenderer::setupCube()
 {
 	glGenVertexArrays(1, &mCubeVAO);
 	glGenBuffers(1, &mCubeVBO);
-	// fill buffer
 	glBindBuffer(GL_ARRAY_BUFFER, mCubeVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-	// link vertex attributes
-	glBindVertexArray(mCubeVAO);
-	{
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-		glEnableVertexAttribArray(2);
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-	}
-	glBindVertexArray(0);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
+	setupBasicShapeBuffers(mCubeVAO, INVALID_BUFFER_ID);
+	
+	// INSTANCING
+	glGenVertexArrays(1, &cubeInstanceVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, mCubeVBO);
+	setupBasicShapeBuffers(cubeInstanceVAO, cubeInstanceBuffer);
 }
+
+
+//////////////////////////////////////////////// SPHERE
+void OpenGLRenderer::setupSphere()
+{
+	glGenVertexArrays(1, &sphereVAO);
+
+	unsigned int vbo, ebo;
+	glGenBuffers(1, &vbo);
+	glGenBuffers(1, &ebo);
+
+	std::vector<glm::vec3> positions;
+	std::vector<glm::vec2> uv;
+	std::vector<glm::vec3> normals;
+	std::vector<unsigned int> indices;
+
+	const unsigned int X_SEGMENTS = 64;
+	const unsigned int Y_SEGMENTS = 64;
+	const float PI = 3.14159265359f;
+	for (unsigned int y = 0; y <= Y_SEGMENTS; ++y)
+	{
+		for (unsigned int x = 0; x <= X_SEGMENTS; ++x)
+		{
+			float xSegment = (float)x / (float)X_SEGMENTS;
+			float ySegment = (float)y / (float)Y_SEGMENTS;
+			float xPos = std::cos(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
+			float yPos = std::cos(ySegment * PI);
+			float zPos = std::sin(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
+
+			positions.push_back(glm::vec3(xPos, yPos, zPos));
+			uv.push_back(glm::vec2(xSegment, ySegment));
+			normals.push_back(glm::vec3(xPos, yPos, zPos));
+		}
+	}
+
+	bool oddRow = false;
+	for (int y = 0; y < Y_SEGMENTS; ++y)
+	{
+		if (!oddRow) // even rows: y == 0, y == 2; and so on
+		{
+			for (int x = 0; x <= X_SEGMENTS; ++x)
+			{
+				indices.push_back(y       * (X_SEGMENTS + 1) + x);
+				indices.push_back((y + 1) * (X_SEGMENTS + 1) + x);
+			}
+		}
+		else
+		{
+			for (int x = X_SEGMENTS; x >= 0; --x)
+			{
+				indices.push_back((y + 1) * (X_SEGMENTS + 1) + x);
+				indices.push_back(y       * (X_SEGMENTS + 1) + x);
+			}
+		}
+		oddRow = !oddRow;
+	}
+	sphereIndexCount = (unsigned int)indices.size();
+
+	std::vector<float> data;
+	for (int i = 0; i < positions.size(); ++i)
+	{
+		data.push_back(positions[i].x);
+		data.push_back(positions[i].y);
+		data.push_back(positions[i].z);
+		if (normals.size() > 0)
+		{
+			data.push_back(normals[i].x);
+			data.push_back(normals[i].y);
+			data.push_back(normals[i].z);
+		}
+		if (uv.size() > 0)
+		{
+			data.push_back(uv[i].x);
+			data.push_back(uv[i].y);
+		}
+	}
+	glBindVertexArray(sphereVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(float), &data[0], GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+	setupBasicShapeBuffers(sphereVAO, INVALID_BUFFER_ID);
+
+	glGenVertexArrays(1, &sphereInstanceVAO);
+	glBindVertexArray(sphereInstanceVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+	setupBasicShapeBuffers(sphereInstanceVAO, sphereInstanceBuffer);
+}
+
+
+//////////////////////////////////////////////// INSTANCE BUFFER UPDATE
+void OpenGLRenderer::UpdateQuadInstanceBuffer(uint32_t size, void* data)
+{
+	glBindBuffer(GL_ARRAY_BUFFER, quadInstanceBuffer);
+	glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+void OpenGLRenderer::UpdateCubeInstanceBuffer(uint32_t size, void* data)
+{
+	glBindBuffer(GL_ARRAY_BUFFER, cubeInstanceBuffer);
+	glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+void OpenGLRenderer::UpdateSphereInstanceBuffer(uint32_t size, void* data)
+{
+	glBindBuffer(GL_ARRAY_BUFFER, sphereInstanceBuffer);
+	glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
 
 OpenGLRenderer::OpenGLRenderer()
 {
+	glGenBuffers(1, &quadInstanceBuffer);
+	glGenBuffers(1, &cubeInstanceBuffer);
+	glGenBuffers(1, &sphereInstanceBuffer);
+
 	setupLine();
 	setupQuad();
 	setupCube();
+	setupSphere();
 }
 
 OpenGLRenderer::~OpenGLRenderer()
 {
-	glDeleteVertexArrays(1, &mQuadVAO);
+	glDeleteVertexArrays(1, &sphereInstanceVAO);
+	glDeleteVertexArrays(1, &sphereVAO);
+	glDeleteVertexArrays(1, &cubeInstanceVAO);
 	glDeleteVertexArrays(1, &mCubeVAO);
+	glDeleteVertexArrays(1, &quadInstanceVAO);
+	glDeleteVertexArrays(1, &mQuadVAO);
 }
 
 void OpenGLRenderer::RenderLine()
@@ -498,11 +658,6 @@ void OpenGLRenderer::RenderLine()
 	glBindVertexArray(mLineVAO);
 	glDrawArrays(GL_LINES, 0, 2);
 	glBindVertexArray(0);
-}
-
-void BindQuadVAO()
-{
-	glBindVertexArray(mQuadVAO);
 }
 
 void OpenGLRenderer::RenderQuad()
@@ -514,14 +669,9 @@ void OpenGLRenderer::RenderQuad()
 
 void OpenGLRenderer::RenderQuadInstanced(int numOfInstances)
 {
-	glBindVertexArray(mQuadVAO);
+	glBindVertexArray(quadInstanceVAO);
 	glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, numOfInstances);
 	glBindVertexArray(0);
-}
-
-void BindCubeVAO()
-{
-	glBindVertexArray(mCubeVAO);
 }
 
 void OpenGLRenderer::RenderCube()
@@ -533,10 +683,27 @@ void OpenGLRenderer::RenderCube()
 
 void OpenGLRenderer::RenderCubeInstanced(int numOfInstances)
 {
-	glBindVertexArray(mCubeVAO);
+	glBindVertexArray(cubeInstanceVAO);
 	glDrawArraysInstanced(GL_TRIANGLES, 0, 36, numOfInstances);
 	glBindVertexArray(0);
 }
+
+void OpenGLRenderer::RenderSphere()
+{
+	glBindVertexArray(sphereVAO);
+	glDrawElements(GL_TRIANGLE_STRIP, sphereIndexCount, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+}
+
+void OpenGLRenderer::RenderSphereInstanced(int numOfInstances)
+{
+	glBindVertexArray(sphereInstanceVAO);
+	glDrawElementsInstanced(GL_TRIANGLE_STRIP, sphereIndexCount, GL_UNSIGNED_INT, 0, numOfInstances);
+	glBindVertexArray(0);
+}
+
+#pragma endregion BASIC_SHAPES
+
 
 glm::mat4 OpenGLRenderer::ModelMatForLineBWTwoPoints(glm::vec3 A, glm::vec3 B)
 {
@@ -1154,4 +1321,41 @@ void SkinnedMesh::SetCurrentAnimation(int& index)
 	}
 	else
 		mCurrentAnimationIndex = index;
+}
+
+void PBRMat_Tex::LoadPBRTexture(const char* filepath, PBRTextureType type)
+{
+	unsigned int texture_id = (unsigned int)LoadTexture(filepath);
+	switch (type)
+	{
+	case ALBEDO:
+		albedo = texture_id;
+		break;
+	case NORMAL:
+		normal = texture_id;
+		break;
+	case METALLIC:
+		metallic = texture_id;
+		break;
+	case ROUGHNESS:
+		roughness = texture_id;
+		break;
+	case AO:
+		ao = texture_id;
+		break;
+	}
+}
+
+void PBRMat_Tex::BindTextures()
+{
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, albedo);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, normal);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, metallic);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, roughness);
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D, ao);
 }

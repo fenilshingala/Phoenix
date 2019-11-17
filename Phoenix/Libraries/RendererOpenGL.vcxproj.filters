@@ -99,6 +99,9 @@
     <ClCompile Include="..\RendererOpenGL\App\Animation.cpp">
       <Filter>Source Files\Examples</Filter>
     </ClCompile>
+    <ClCompile Include="..\RendererOpenGL\App\PBR.cpp">
+      <Filter>Source Files\Examples</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\Thirdparty\imgui\imconfig.h">
@@ -207,6 +210,12 @@
     </None>
     <None Include="..\RendererOpenGL\App\Resources\Shaders\skinning.vert">
       <Filter>Resource Files\Shaders\Animation</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\pbr.vert">
+      <Filter>Resource Files\Shaders\ForwardLighting</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\pbr.frag">
+      <Filter>Resource Files\Shaders\ForwardLighting</Filter>
     </None>
   </ItemGroup>
 </Project>
