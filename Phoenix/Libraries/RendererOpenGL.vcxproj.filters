@@ -43,6 +43,9 @@
     <Filter Include="Resource Files\Shaders\Animation">
       <UniqueIdentifier>{3b9631b5-b976-49ac-93eb-90996b96f04d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\Shaders\ForwardLighting\IBL">
+      <UniqueIdentifier>{fa391719-fc84-4489-aec4-9b0759d9dd04}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui.cpp">
@@ -212,10 +215,34 @@
       <Filter>Resource Files\Shaders\Animation</Filter>
     </None>
     <None Include="..\RendererOpenGL\App\Resources\Shaders\pbr.vert">
-      <Filter>Resource Files\Shaders\ForwardLighting</Filter>
+      <Filter>Resource Files\Shaders\ForwardLighting\IBL</Filter>
     </None>
     <None Include="..\RendererOpenGL\App\Resources\Shaders\pbr.frag">
-      <Filter>Resource Files\Shaders\ForwardLighting</Filter>
+      <Filter>Resource Files\Shaders\ForwardLighting\IBL</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\cubemap.vert">
+      <Filter>Resource Files\Shaders\ForwardLighting\IBL</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\irradiance_convolution.frag">
+      <Filter>Resource Files\Shaders\ForwardLighting\IBL</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\equirectangular_to_cubemap.frag">
+      <Filter>Resource Files\Shaders\ForwardLighting\IBL</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\prefilter.frag">
+      <Filter>Resource Files\Shaders\ForwardLighting\IBL</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\brdf.vert">
+      <Filter>Resource Files\Shaders\ForwardLighting\IBL</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\brdf.frag">
+      <Filter>Resource Files\Shaders\ForwardLighting\IBL</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\background.vert">
+      <Filter>Resource Files\Shaders\ForwardLighting\IBL</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\background.frag">
+      <Filter>Resource Files\Shaders\ForwardLighting\IBL</Filter>
     </None>
   </ItemGroup>
 </Project>

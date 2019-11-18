@@ -180,7 +180,9 @@ ShaderProgram::ShaderProgram(std::string vertexShaderPath, std::string fragmentS
 }
 
 ShaderProgram::~ShaderProgram()
-{}
+{
+	glDeleteProgram(mId);
+}
 
 void ShaderProgram::SetUniform(const char* name, void* data)
 {
@@ -313,7 +315,8 @@ void ShaderProgram::SetUniform(const char* name, void* data)
 
 			// SAMPLERS
 		case GL_SAMPLER_1D:
-		case GL_SAMPLER_2D: 
+		case GL_SAMPLER_2D:
+		case GL_SAMPLER_CUBE:
 			glUniform1iv(uniformInfo.location, 1, (int*)data);
 			break;
 		case GL_SAMPLER_3D: break;
@@ -326,7 +329,7 @@ void ShaderProgram::SetUniform(const char* name, void* data)
 	}
 }
 
-uint32_t LoadTexture(const char* path)
+uint32_t LoadTexture(const char* path, bool isHDR)
 {
 	unsigned int texture;
 	glGenTextures(1, &texture);
@@ -353,7 +356,14 @@ uint32_t LoadTexture(const char* path)
 	default: assert(0); break;
 	}
 
-	glTexImage2D(GL_TEXTURE_2D, 0, internal_format, width, height, 0, internal_format, GL_UNSIGNED_BYTE, data);
+	if (isHDR)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+	}
+	else
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, internal_format, width, height, 0, internal_format, GL_UNSIGNED_BYTE, data);
+	}
 	
 	glGenerateMipmap(GL_TEXTURE_2D);
 	
@@ -1323,6 +1333,26 @@ void SkinnedMesh::SetCurrentAnimation(int& index)
 		mCurrentAnimationIndex = index;
 }
 
+PBRMat_Tex::~PBRMat_Tex()
+{
+	if (albedo != (unsigned int)INVALID_TEXTURE_ID)
+	{
+		glDeleteTextures(1, &albedo);
+	}
+	if (metallic != (unsigned int)INVALID_TEXTURE_ID)
+	{
+		glDeleteTextures(1, &metallic);
+	}
+	if (roughness != (unsigned int)INVALID_TEXTURE_ID)
+	{
+		glDeleteTextures(1, &roughness);
+	}
+	if (ao != (unsigned int)INVALID_TEXTURE_ID)
+	{
+		glDeleteTextures(1, &ao);
+	}
+}
+
 void PBRMat_Tex::LoadPBRTexture(const char* filepath, PBRTextureType type)
 {
 	unsigned int texture_id = (unsigned int)LoadTexture(filepath);
@@ -1358,4 +1388,12 @@ void PBRMat_Tex::BindTextures()
 	glBindTexture(GL_TEXTURE_2D, roughness);
 	glActiveTexture(GL_TEXTURE4);
 	glBindTexture(GL_TEXTURE_2D, ao);
+}
+
+void PBRMat::UpdateMaterial(ShaderProgram* pShaderProgram)
+{
+	pShaderProgram->SetUniform("u_vAlbedo", &albedo);
+	pShaderProgram->SetUniform("u_fMetallic", &metallic);
+	pShaderProgram->SetUniform("u_fRoughness", &roughness);
+	pShaderProgram->SetUniform("u_fAo", &ao);
 }

@@ -59,20 +59,28 @@
     <ClInclude Include="..\RendererOpenGL\Window.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\background.frag" />
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\background.vert" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\basic_lighting.frag" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\basic_lighting.vert" />
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\brdf.frag" />
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\brdf.vert" />
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\cubemap.vert" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\deferred_light_box.frag" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\deferred_light_box.vert" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\deferred_shading.frag" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\deferred_shading.vert" />
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\equirectangular_to_cubemap.frag" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\g_buffer.frag" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\g_buffer.vert" />
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\irradiance_convolution.frag" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\mesh.frag" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\mesh.vert" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\model.frag" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\model.vert" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\pbr.frag" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\pbr.vert" />
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\prefilter.frag" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\shadow_debug.frag" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\shadow_debug.vert" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\shadow_depth.frag" />

@@ -247,7 +247,7 @@ private:
 	void updateCameraVectors();
 };
 
-uint32_t LoadTexture(const char*);
+uint32_t LoadTexture(const char*, bool isHDR = false);
 
 struct InstanceData
 {
@@ -266,21 +266,45 @@ enum PBRTextureType
 
 struct PBRMat_Tex
 {
+#define INVALID_TEXTURE_ID -1
+
+	~PBRMat_Tex();
 	void LoadPBRTexture(const char* filepath, PBRTextureType type);
 	void BindTextures();
 
 private:
-	unsigned int albedo;
-	unsigned int normal;
-	unsigned int metallic;
-	unsigned int roughness;
-	unsigned int ao;
+	unsigned int albedo		= INVALID_TEXTURE_ID;
+	unsigned int normal		= INVALID_TEXTURE_ID;
+	unsigned int metallic	= INVALID_TEXTURE_ID;
+	unsigned int roughness	= INVALID_TEXTURE_ID;
+	unsigned int ao			= INVALID_TEXTURE_ID;
 };
 
 struct PBRMat
 {
+	inline void setAlbedo(glm::vec3 a_vAlbedo)		{ albedo = a_vAlbedo; }
+	inline void setMetallic(float a_fMetallic)		{ metallic = a_fMetallic; }
+	inline void setRoughness(float a_fRoughness)	{ roughness = a_fRoughness; }
+	inline void setAo(float a_fAo)					{ ao = a_fAo; }
+
+	inline glm::vec3 getAlbedo()	{ return albedo; }
+	inline float getMetallic()		{ return metallic; }
+	inline float getRoughness()		{ return roughness; }
+	inline float getAo()			{ return ao; }
+
+	void UpdateMaterial(ShaderProgram* pShaderProgram);
+
+	PBRMat() {}
+
+	PBRMat(glm::vec3 a_vAlbedo, float a_fMetallic, float a_fRoughness, float a_fAo):
+	albedo(a_vAlbedo),
+	metallic(a_fMetallic),
+	roughness(a_fRoughness),
+	ao(a_fAo)
+	{}
+
+private:
 	glm::vec3	albedo;
-	float		normal;
 	float		metallic;
 	float		roughness;
 	float		ao;
