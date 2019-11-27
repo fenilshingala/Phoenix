@@ -46,6 +46,9 @@
     <Filter Include="Resource Files\Shaders\ForwardLighting\IBL">
       <UniqueIdentifier>{fa391719-fc84-4489-aec4-9b0759d9dd04}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\Shaders\ForwardLighting\AmbientOcclusion">
+      <UniqueIdentifier>{120be956-946b-45a0-a92a-2fd2ddc329c5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Common\Thirdparty\imgui\imgui.cpp">
@@ -243,6 +246,27 @@
     </None>
     <None Include="..\RendererOpenGL\App\Resources\Shaders\background.frag">
       <Filter>Resource Files\Shaders\ForwardLighting\IBL</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\ssao.vert">
+      <Filter>Resource Files\Shaders\ForwardLighting\AmbientOcclusion</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\ssao.frag">
+      <Filter>Resource Files\Shaders\ForwardLighting\AmbientOcclusion</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\ssao_blur.frag">
+      <Filter>Resource Files\Shaders\ForwardLighting\AmbientOcclusion</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\gBufferAO.vert">
+      <Filter>Resource Files\Shaders\ForwardLighting\AmbientOcclusion</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\gBufferAO.frag">
+      <Filter>Resource Files\Shaders\ForwardLighting\AmbientOcclusion</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\pbrAO.vert">
+      <Filter>Resource Files\Shaders\ForwardLighting\AmbientOcclusion</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\pbrAO.frag">
+      <Filter>Resource Files\Shaders\ForwardLighting\AmbientOcclusion</Filter>
     </None>
   </ItemGroup>
 </Project>

@@ -71,6 +71,8 @@
     <None Include="..\RendererOpenGL\App\Resources\Shaders\deferred_shading.frag" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\deferred_shading.vert" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\equirectangular_to_cubemap.frag" />
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\gBufferAO.frag" />
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\gBufferAO.vert" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\g_buffer.frag" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\g_buffer.vert" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\irradiance_convolution.frag" />
@@ -80,6 +82,8 @@
     <None Include="..\RendererOpenGL\App\Resources\Shaders\model.vert" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\pbr.frag" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\pbr.vert" />
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\pbrAO.frag" />
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\pbrAO.vert" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\prefilter.frag" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\shadow_debug.frag" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\shadow_debug.vert" />
@@ -87,6 +91,9 @@
     <None Include="..\RendererOpenGL\App\Resources\Shaders\shadow_depth.vert" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\skinning.frag" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\skinning.vert" />
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\ssao.frag" />
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\ssao.vert" />
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\ssao_blur.frag" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

@@ -1061,7 +1061,7 @@ void SkinnedMesh::Render(ShaderProgram shader)
 	{
 		const uint32_t MaterialIndex = m_Entries[i].MaterialIndex;
 		tinystl::unordered_map<uint32_t, tinystl::vector<Texture>>::iterator itr = mMeshTexturesMap.find(MaterialIndex);
-
+		/*
 		if (itr != mMeshTexturesMap.end())
 		{
 			tinystl::vector<Texture>& textures = itr->second;
@@ -1094,7 +1094,7 @@ void SkinnedMesh::Render(ShaderProgram shader)
 				glBindTexture(GL_TEXTURE_2D, textures[i].id);
 			}
 		}
-
+		*/
 		if (mInstanceCount != 0)
 		{
 			glDrawElementsInstancedBaseVertex(GL_TRIANGLES,

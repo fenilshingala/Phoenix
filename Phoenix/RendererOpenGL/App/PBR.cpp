@@ -3,6 +3,7 @@
 #if PBR
 
 #include "../Common.h"
+#include <random>
 
 const int NR_LIGHTS = 100;
 struct LightBlock
@@ -14,41 +15,258 @@ struct LightBlock
 };
 
 OpenGLRenderer* pOpenGLRenderer = NULL;
+PBRMat_Tex rustediron;
+PBRMat_Tex military_panel;
+PBRMat_Tex streaked_metal;
+PBRMat_Tex metalgrid;
+PBRMat_Tex titanium;
+glm::vec3 planeColor(0.5f, 0.5f, 0.6f);
+PBRMat planeMaterial(planeColor, 0.0f, 1.0f, 1.0f);
+SkinnedMesh nanosuit;
+
+float lerp(float a, float b, float f)
+{
+	return a + f * (b - a);
+}
+
+void RenderScene(ShaderProgram& pbrShader)
+{
+	// titanium
+	glm::mat4 model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(-6.0f, 0.0f, 0.0f));
+	pbrShader.SetUniform("model", &model);
+	titanium.BindTextures();
+	pOpenGLRenderer->RenderSphere();
+
+	// streaked_metal
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(-3.0f, 0.0f, 0.0f));
+	pbrShader.SetUniform("model", &model);
+	streaked_metal.BindTextures();
+	pOpenGLRenderer->RenderSphere();
+
+	// rustediron
+	model = glm::mat4(1.0f);
+	pbrShader.SetUniform("model", &model);
+	rustediron.BindTextures();
+	pOpenGLRenderer->RenderSphere();
+
+	// metalgrid
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(3.0f, 0.0f, 0.0f));
+	pbrShader.SetUniform("model", &model);
+	metalgrid.BindTextures();
+	pOpenGLRenderer->RenderSphere();
+
+	// military_panel
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(6.0f, 0.0f, 0.0f));
+	pbrShader.SetUniform("model", &model);
+	military_panel.BindTextures();
+	pOpenGLRenderer->RenderSphere();
+
+	// plane
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0f));
+	model = glm::scale(model, glm::vec3(10.0f, 0.5f, 10.0f));
+	int zero = 0, one = 1;
+	pbrShader.SetUniform("isNotTextured", &one);
+	planeMaterial.UpdateMaterial(&pbrShader);
+	
+	pbrShader.SetUniform("model", &model);
+	pOpenGLRenderer->RenderCube();
+	
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+	model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+	pbrShader.SetUniform("model", &model);
+	pOpenGLRenderer->RenderCube();
+
+	/*model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(0.0f, 10.0f, 0.0f));
+	model = glm::scale(model, glm::vec3(0.25f));
+	pbrShader.SetUniform("model", &model);
+	nanosuit.Render(pbrShader);*/
+
+	pbrShader.SetUniform("isNotTextured", &zero);
+}
 
 void Run()
 {
 	window.initWindow();
 	lastX = window.windowWidth() / 2.0f;
 	lastY = window.windowHeight() / 2.0f;
+	int zero = 0, one = 1, two = 2, three = 3, four = 4, five = 5, six = 6, seven = 7, eight = 8;
 
 	camera.Position = glm::vec3(0.0f, 2.0f, 10.0f);
 
 	pOpenGLRenderer = new OpenGLRenderer();
+	bool isAmbientOcclusion = false;
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	glEnable(GL_MULTISAMPLE);
 
-	ShaderProgram pbrShader("../../Phoenix/RendererOpenGL/App/Resources/Shaders/pbr.vert",
-							"../../Phoenix/RendererOpenGL/App/Resources/Shaders/pbr.frag");
+	ShaderProgram gBufferShader("../../Phoenix/RendererOpenGL/App/Resources/Shaders/gBufferAO.vert",
+								"../../Phoenix/RendererOpenGL/App/Resources/Shaders/gBufferAO.frag");
+
+	glUseProgram(gBufferShader.mId);
+	gBufferShader.SetUniform("albedoMap", &zero);
+	gBufferShader.SetUniform("normalMap", &one);
+	gBufferShader.SetUniform("metallicMap", &two);
+	gBufferShader.SetUniform("roughnessMap", &three);
+	gBufferShader.SetUniform("aoMap", &four);
+
+	ShaderProgram shaderSSAO("../../Phoenix/RendererOpenGL/App/Resources/Shaders/ssao.vert",
+							 "../../Phoenix/RendererOpenGL/App/Resources/Shaders/ssao.frag");
+	// SSAO uniform modifiers
+	int kernelSize = 64;
+	float radius = 0.5f;
+	float bias = 0.025f;
+
+	ShaderProgram shaderSSAOBlur("../../Phoenix/RendererOpenGL/App/Resources/Shaders/ssao.vert",
+								 "../../Phoenix/RendererOpenGL/App/Resources/Shaders/ssao_blur.frag");
+
+
+	glUseProgram(shaderSSAO.mId);
+	shaderSSAO.SetUniform("gPosition", &zero);
+	shaderSSAO.SetUniform("gNormal", &one);
+	shaderSSAO.SetUniform("texNoise", &two);
+	glUseProgram(shaderSSAOBlur.mId);
+	shaderSSAOBlur.SetUniform("ssaoInput", &zero);
+
+	// configure g-buffer framebuffer
+	// ------------------------------
+	unsigned int gBuffer;
+	glGenFramebuffers(1, &gBuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
+	unsigned int gPosition, gNormal, gAlbedo, gMaterial;
+	// position color buffer
+	glGenTextures(1, &gPosition);
+	glBindTexture(GL_TEXTURE_2D, gPosition);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, window.windowWidth(), window.windowHeight(), 0, GL_RGB, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
+	// normal color buffer
+	glGenTextures(1, &gNormal);
+	glBindTexture(GL_TEXTURE_2D, gNormal);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, window.windowWidth(), window.windowHeight(), 0, GL_RGB, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);
+	// color + specular color buffer
+	glGenTextures(1, &gAlbedo);
+	glBindTexture(GL_TEXTURE_2D, gAlbedo);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, window.windowWidth(), window.windowHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedo, 0);
+	//material buffer
+	glGenTextures(1, &gMaterial);
+	glBindTexture(GL_TEXTURE_2D, gMaterial);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, window.windowWidth(), window.windowHeight(), 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gMaterial, 0);
+	// tell OpenGL which color attachments we'll use (of this framebuffer) for rendering 
+	unsigned int attachments[4] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
+	glDrawBuffers(4, attachments);
+	// create and attach depth buffer (renderbuffer)
+	unsigned int rboDepth;
+	glGenRenderbuffers(1, &rboDepth);
+	glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, window.windowWidth(), window.windowHeight());
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+	// finally check if framebuffer is complete
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		assert(0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+	// also create framebuffer to hold SSAO processing stage 
+	// -----------------------------------------------------
+	unsigned int ssaoFBO, ssaoBlurFBO;
+	glGenFramebuffers(1, &ssaoFBO);  glGenFramebuffers(1, &ssaoBlurFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, ssaoFBO);
+	unsigned int ssaoColorBuffer, ssaoColorBufferBlur;
+	// SSAO color buffer
+	glGenTextures(1, &ssaoColorBuffer);
+	glBindTexture(GL_TEXTURE_2D, ssaoColorBuffer);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, window.windowWidth(), window.windowHeight(), 0, GL_RGB, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ssaoColorBuffer, 0);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		assert(0);
+	// and blur stage
+	glBindFramebuffer(GL_FRAMEBUFFER, ssaoBlurFBO);
+	glGenTextures(1, &ssaoColorBufferBlur);
+	glBindTexture(GL_TEXTURE_2D, ssaoColorBufferBlur);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, window.windowWidth(), window.windowHeight(), 0, GL_RGB, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ssaoColorBufferBlur, 0);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		assert(0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	// generate sample kernel
+	// ----------------------
+	std::uniform_real_distribution<GLfloat> randomFloats(0.0, 1.0); // generates random floats between 0.0 and 1.0
+	std::default_random_engine generator;
+	std::vector<glm::vec3> ssaoKernel;
+	for (unsigned int i = 0; i < 64; ++i)
+	{
+		glm::vec3 sample(randomFloats(generator) * 2.0 - 1.0, randomFloats(generator) * 2.0 - 1.0, randomFloats(generator));
+		sample = glm::normalize(sample);
+		sample *= randomFloats(generator);
+		float scale = float(i) / 64.0f;
+
+		// scale samples s.t. they're more aligned to center of kernel
+		scale = lerp(0.1f, 1.0f, scale * scale);
+		sample *= scale;
+		ssaoKernel.push_back(sample);
+	}
+
+	// generate noise texture
+	// ----------------------
+	std::vector<glm::vec3> ssaoNoise;
+	for (unsigned int i = 0; i < 16; i++)
+	{
+		glm::vec3 noise(randomFloats(generator) * 2.0 - 1.0, randomFloats(generator) * 2.0 - 1.0, 0.0f); // rotate around z-axis (in tangent space)
+		ssaoNoise.push_back(noise);
+	}
+	unsigned int noiseTexture; glGenTextures(1, &noiseTexture);
+	glBindTexture(GL_TEXTURE_2D, noiseTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, 4, 4, 0, GL_RGB, GL_FLOAT, &ssaoNoise[0]);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+
+	ShaderProgram pbrShader("../../Phoenix/RendererOpenGL/App/Resources/Shaders/pbrAO.vert",
+							"../../Phoenix/RendererOpenGL/App/Resources/Shaders/pbrAO.frag");
 	
-	int zero = 0, one = 1, two = 2, three = 3, four = 4, five = 5, six = 6, seven = 7;
 	glUseProgram(pbrShader.mId);
-	pbrShader.SetUniform("albedoMap", &zero);
-	pbrShader.SetUniform("normalMap", &one);
-	pbrShader.SetUniform("metallicMap", &two);
-	pbrShader.SetUniform("roughnessMap", &three);
-	pbrShader.SetUniform("aoMap", &four);
+	pbrShader.SetUniform("gPosition", &zero);
+	pbrShader.SetUniform("gNormal", &one);
+	pbrShader.SetUniform("gAlbedo", &two);
+	pbrShader.SetUniform("gMaterial", &three);
 	pbrShader.SetUniform("irradianceMap", &five);
 	pbrShader.SetUniform("prefilterMap", &six);
 	pbrShader.SetUniform("brdfLUT", &seven);
+	pbrShader.SetUniform("ssao", &eight);
 
 	ShaderProgram meshShader("../../Phoenix/RendererOpenGL/App/Resources/Shaders/mesh.vert",
 							 "../../Phoenix/RendererOpenGL/App/Resources/Shaders/mesh.frag");
 
 	ShaderProgram equirectangularToCubemapShader("../../Phoenix/RendererOpenGL/App/Resources/Shaders/cubemap.vert",
-										   "../../Phoenix/RendererOpenGL/App/Resources/Shaders/equirectangular_to_cubemap.frag");
+												 "../../Phoenix/RendererOpenGL/App/Resources/Shaders/equirectangular_to_cubemap.frag");
 	ShaderProgram irradianceShader("../../Phoenix/RendererOpenGL/App/Resources/Shaders/cubemap.vert",
 								   "../../Phoenix/RendererOpenGL/App/Resources/Shaders/irradiance_convolution.frag");
 	ShaderProgram prefilterShader("../../Phoenix/RendererOpenGL/App/Resources/Shaders/cubemap.vert",
@@ -61,35 +279,30 @@ void Run()
 	glUseProgram(backgroundShader.mId);
 	backgroundShader.SetUniform("environmentMap", &zero);
 
-	PBRMat_Tex rustediron;
 	rustediron.LoadPBRTexture("../../Phoenix/RendererOpenGL/App/Resources/PBR/rustediron1-alt2-Unreal-Engine/albedo.png", ALBEDO);
 	rustediron.LoadPBRTexture("../../Phoenix/RendererOpenGL/App/Resources/PBR/rustediron1-alt2-Unreal-Engine/normal.png", NORMAL);
 	rustediron.LoadPBRTexture("../../Phoenix/RendererOpenGL/App/Resources/PBR/rustediron1-alt2-Unreal-Engine/metallic.png", METALLIC);
 	rustediron.LoadPBRTexture("../../Phoenix/RendererOpenGL/App/Resources/PBR/rustediron1-alt2-Unreal-Engine/roughness.png", ROUGHNESS);
 	rustediron.LoadPBRTexture("../../Phoenix/RendererOpenGL/App/Resources/PBR/rustediron1-alt2-Unreal-Engine/ao.jpg", AO);
 
-	PBRMat_Tex military_panel;
 	military_panel.LoadPBRTexture("../../Phoenix/RendererOpenGL/App/Resources/PBR/military-panel1-ue/albedo.png", ALBEDO);
 	military_panel.LoadPBRTexture("../../Phoenix/RendererOpenGL/App/Resources/PBR/military-panel1-ue/normal.png", NORMAL);
 	military_panel.LoadPBRTexture("../../Phoenix/RendererOpenGL/App/Resources/PBR/military-panel1-ue/metallic.png", METALLIC);
 	military_panel.LoadPBRTexture("../../Phoenix/RendererOpenGL/App/Resources/PBR/military-panel1-ue/roughness.png", ROUGHNESS);
 	military_panel.LoadPBRTexture("../../Phoenix/RendererOpenGL/App/Resources/PBR/military-panel1-ue/ao.png", AO);
 
-	PBRMat_Tex streaked_metal;
 	streaked_metal.LoadPBRTexture("../../Phoenix/RendererOpenGL/App/Resources/PBR/streaked-metal1-ue/albedo.png", ALBEDO);
 	streaked_metal.LoadPBRTexture("../../Phoenix/RendererOpenGL/App/Resources/PBR/streaked-metal1-ue/normal.png", NORMAL);
 	streaked_metal.LoadPBRTexture("../../Phoenix/RendererOpenGL/App/Resources/PBR/streaked-metal1-ue/metallic.png", METALLIC);
 	streaked_metal.LoadPBRTexture("../../Phoenix/RendererOpenGL/App/Resources/PBR/streaked-metal1-ue/roughness.png", ROUGHNESS);
 	streaked_metal.LoadPBRTexture("../../Phoenix/RendererOpenGL/App/Resources/PBR/streaked-metal1-ue/ao.png", AO);
 
-	PBRMat_Tex metalgrid;
 	metalgrid.LoadPBRTexture("../../Phoenix/RendererOpenGL/App/Resources/PBR/metalgrid4-ue/albedo.png", ALBEDO);
 	metalgrid.LoadPBRTexture("../../Phoenix/RendererOpenGL/App/Resources/PBR/metalgrid4-ue/normal.png", NORMAL);
 	metalgrid.LoadPBRTexture("../../Phoenix/RendererOpenGL/App/Resources/PBR/metalgrid4-ue/metallic.png", METALLIC);
 	metalgrid.LoadPBRTexture("../../Phoenix/RendererOpenGL/App/Resources/PBR/metalgrid4-ue/roughness.png", ROUGHNESS);
 	metalgrid.LoadPBRTexture("../../Phoenix/RendererOpenGL/App/Resources/PBR/metalgrid4-ue/ao.png", AO);
 
-	PBRMat_Tex titanium;
 	titanium.LoadPBRTexture("../../Phoenix/RendererOpenGL/App/Resources/PBR/Titanium-Scuffed-Unreal-Engine/albedo.png", ALBEDO);
 	titanium.LoadPBRTexture("../../Phoenix/RendererOpenGL/App/Resources/PBR/Titanium-Scuffed-Unreal-Engine/normal.png", NORMAL);
 	titanium.LoadPBRTexture("../../Phoenix/RendererOpenGL/App/Resources/PBR/Titanium-Scuffed-Unreal-Engine/metallic.png", METALLIC);
@@ -298,21 +511,10 @@ void Run()
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-
-	// initialize static shader uniforms before rendering
-	// --------------------------------------------------
-	glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)window.windowWidth() / (float)window.windowHeight(), 0.1f, 100.0f);
-	glUseProgram(pbrShader.mId);
-	pbrShader.SetUniform("projection", &projection);
-	glUseProgram(backgroundShader.mId);
-	backgroundShader.SetUniform("projection", &projection);
-
 	// then before rendering, configure the viewport to the original framebuffer's screen dimensions
 	glViewport(0, 0, window.windowWidth(), window.windowHeight());
 
-	glm::vec3 planeColor(0.5f, 0.5f, 0.6f);
-	// FOR PLANE
-	PBRMat planeMaterial(planeColor, 0.0f, 1.0f, 1.0f);
+	nanosuit.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/nanosuit/nanosuit.obj");
 
 	window.initGui();
 
@@ -326,73 +528,95 @@ void Run()
 			glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)window.windowWidth() / (float)window.windowHeight(), near_plane, far_plane);
 			glm::mat4 view = camera.GetViewMatrix();
 
-			glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+			glClearColor(0.1f, 0.1f, 0.1f, 0.0f);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+
+			// G BUFFER PASS
+			glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
+				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+				glUseProgram(gBufferShader.mId);
+				gBufferShader.SetUniform("projection", &projection);
+				gBufferShader.SetUniform("view", &view);
+				RenderScene(gBufferShader);
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+			// SSAO
+			// 2. generate SSAO texture
+			// ------------------------
+			glBindFramebuffer(GL_FRAMEBUFFER, ssaoFBO);
+			glClear(GL_COLOR_BUFFER_BIT);
+			glUseProgram(shaderSSAO.mId);
+			// Send kernel + rotation
+			for (unsigned int i = 0; i < 64; ++i)
+			{
+				glUniform3fv(glGetUniformLocation(shaderSSAO.mId, ("samples[" + std::to_string(i) + "]").c_str()),
+							1, (GLfloat*)&ssaoKernel[i]);
+				//shaderSSAO.setVec3("samples[" + std::to_string(i) + "]", ssaoKernel[i]);
+			}
+			glm::vec2 noiseScale((float)(window.windowWidth() / 4), (float)(window.windowHeight() / 4));
+			shaderSSAO.SetUniform("projection", &projection);
+			shaderSSAO.SetUniform("kernelSize", &kernelSize);
+			shaderSSAO.SetUniform("radius", &radius);
+			shaderSSAO.SetUniform("bias", &bias);
+			shaderSSAO.SetUniform("noiseScale", &noiseScale);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, gPosition);
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, gNormal);
+			glActiveTexture(GL_TEXTURE2);
+			glBindTexture(GL_TEXTURE_2D, noiseTexture);
+			pOpenGLRenderer->RenderQuad();
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+			// 3. blur SSAO texture to remove noise
+			// ------------------------------------
+			glBindFramebuffer(GL_FRAMEBUFFER, ssaoBlurFBO);
+			glClear(GL_COLOR_BUFFER_BIT);
+			glUseProgram(shaderSSAOBlur.mId);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, ssaoColorBuffer);
+			pOpenGLRenderer->RenderQuad();
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+			// update lights data
+			glBindBuffer(GL_UNIFORM_BUFFER, uboLightsBlock);
+			glBufferSubData(GL_UNIFORM_BUFFER, 0, lightBlockSize * lights.size(), lights.data());
+			glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+			// LIGHTING PASS
 			glUseProgram(pbrShader.mId);
 			pbrShader.SetUniform("projection", &projection);
 			pbrShader.SetUniform("view", &view);
 			pbrShader.SetUniform("camPos", &camera.Position);
 
 			// bind pre-computed IBL data
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, gPosition);
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, gNormal);
+			glActiveTexture(GL_TEXTURE2);
+			glBindTexture(GL_TEXTURE_2D, gAlbedo);
+			glActiveTexture(GL_TEXTURE3);
+			glBindTexture(GL_TEXTURE_2D, gMaterial);
 			glActiveTexture(GL_TEXTURE5);
 			glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap);
 			glActiveTexture(GL_TEXTURE6);
 			glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap);
 			glActiveTexture(GL_TEXTURE7);
 			glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);
+			glActiveTexture(GL_TEXTURE8); // add extra SSAO texture to lighting pass
+			glBindTexture(GL_TEXTURE_2D, ssaoColorBufferBlur);
 
-			// update lights data
-			glBindBuffer(GL_UNIFORM_BUFFER, uboLightsBlock);
-			glBufferSubData(GL_UNIFORM_BUFFER, 0, lightBlockSize * lights.size(), lights.data());
-			glBindBuffer(GL_UNIFORM_BUFFER, 0);
 			int activeLights = (int)lights.size();
 			pbrShader.SetUniform("activeLights", &activeLights);
+			int isAO = (int)isAmbientOcclusion;
+			pbrShader.SetUniform("isAmbientOcclusion", &isAO);
 			
-			// titanium
-			glm::mat4 model = glm::mat4(1.0f);
-			model = glm::translate(model, glm::vec3(-6.0f, 0.0f, 0.0f));
-			pbrShader.SetUniform("model", &model);
-			titanium.BindTextures();
-			pOpenGLRenderer->RenderSphere();
-
-			// streaked_metal
-			model = glm::mat4(1.0f);
-			model = glm::translate(model, glm::vec3(-3.0f, 0.0f, 0.0f));
-			pbrShader.SetUniform("model", &model);
-			streaked_metal.BindTextures();
-			pOpenGLRenderer->RenderSphere();
-
-			// rustediron
-			model = glm::mat4(1.0f);
-			pbrShader.SetUniform("model", &model);
-			rustediron.BindTextures();
-			pOpenGLRenderer->RenderSphere();
-
-			// metalgrid
-			model = glm::mat4(1.0f);
-			model = glm::translate(model, glm::vec3(3.0f, 0.0f, 0.0f));
-			pbrShader.SetUniform("model", &model);
-			metalgrid.BindTextures();
-			pOpenGLRenderer->RenderSphere();
-
-			// military_panel
-			model = glm::mat4(1.0f);
-			model = glm::translate(model, glm::vec3(6.0f, 0.0f, 0.0f));
-			pbrShader.SetUniform("model", &model);
-			military_panel.BindTextures();
-			pOpenGLRenderer->RenderSphere();
-
-			// plane
-			model = glm::mat4(1.0f);
-			model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0f));
-			model = glm::scale(model, glm::vec3(10.0f, 0.5f, 10.0f));
-			glUseProgram(pbrShader.mId);
-			pbrShader.SetUniform("isNotTextured", &one);
-			planeMaterial.UpdateMaterial(&pbrShader);
-			pbrShader.SetUniform("model", &model);
-			pOpenGLRenderer->RenderCube();
-			pbrShader.SetUniform("isNotTextured", &zero);
+			glDepthFunc(GL_ONE_MINUS_SRC_ALPHA);
+			pOpenGLRenderer->RenderQuad();
+			glDepthFunc(GL_LEQUAL);
 
 			// representation of light
 			glUseProgram(meshShader.mId);
@@ -400,6 +624,7 @@ void Run()
 			meshShader.SetUniform("view", &view);
 			for (int k = 0; k < activeLights; ++k)
 			{
+				glm::mat4 model = glm::mat4(1.0f);
 				model = glm::mat4(1.0f);
 				model = glm::translate(model, glm::vec3(lights[k].Position));
 				model = glm::scale(model, glm::vec3(0.1f));
@@ -428,6 +653,10 @@ void Run()
 				ImGui::Text(str.c_str());
 				str = "actual fps: " + std::to_string(window.actualFrameRate());
 				ImGui::Text(str.c_str());
+				ImGui::Checkbox("Ambient Occlusion", &isAmbientOcclusion);
+				ImGui::InputInt("Kernel Size", &kernelSize, 1, 0);
+				ImGui::InputFloat("Radius", &radius, 1.0f, 0.0f, 3);
+				ImGui::InputFloat("Bias", &bias, 1.0f, 0.0f, 3);
 				ImGui::End();
 
 				glm::vec3 col = planeMaterial.getAlbedo();
