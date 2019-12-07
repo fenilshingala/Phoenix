@@ -888,7 +888,7 @@ void SkinnedMesh::VertexBoneData::AddBoneData(uint32_t BoneID, float Weight)
 	}
 
 	// should never get here - more bones than we have space for
-	assert(0);
+	//assert(0);
 }
 
 SkinnedMesh::SkinnedMesh()
@@ -934,7 +934,7 @@ bool SkinnedMesh::LoadMesh(const std::string& Filename)
 
 	bool Ret = false;
 
-	m_pScene = m_Importer.ReadFile(Filename.c_str(), aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices);
+	m_pScene = m_Importer.ReadFile(Filename.c_str(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
 	m_pScene = m_Importer.GetOrphanedScene();
 
 	if (m_pScene)

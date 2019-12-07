@@ -274,6 +274,7 @@ void Window::update()
 	SDL_Event e;
 	while (SDL_PollEvent(&e) != 0)
 	{
+		ImGui_ImplSDL2_ProcessEvent(&e);
 		switch (e.type)
 		{
 		case SDL_QUIT:
@@ -363,6 +364,7 @@ void Window::initGui()
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
 	ImGui::StyleColorsDark();
 

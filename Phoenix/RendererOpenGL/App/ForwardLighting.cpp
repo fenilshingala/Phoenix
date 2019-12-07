@@ -32,11 +32,104 @@ glm::mat4 toGlmMat(aiMatrix4x4 aiMat)
 	return mat;
 }
 
+#pragma region ANIM2
+
+#include <map>
+#define POINTS_NUM 10
+#define delta 0.01
+
+glm::vec3 curvePoints[POINTS_NUM] = { glm::vec3(1.0f, 0.0f, 1.0f),
+									  glm::vec3(1.0f, 0.0f, 1.0f),
+									  glm::vec3(2.0f, 0.0f, 2.0f),
+									  glm::vec3(0.0f, 0.0f, 3.0f),
+									  glm::vec3(0.5f, 0.0f, 4.0f),
+									  glm::vec3(0.0f, 0.0f, 5.0f),
+									  glm::vec3(0.0f, 0.0f, 6.0f),
+									  glm::vec3(-1.0f, 0.0f, 7.0f),
+									  glm::vec3(-1.5f, 0.0f, 8.0f),
+									  glm::vec3(-2.5f, 0.0f, 8.0f) };
+
+glm::mat4 knots;
+
+std::map<float, float> arcLengthAt;
+
+struct arcLengthStruct
+{
+	float u;
+	float length;
+	int segmentNum;
+};
+std::vector<arcLengthStruct> myPathData;
+std::vector<float> arcLength;
+float curDelta;
+
+
+//Curve function
+glm::vec3 mySpaceCurve(float u, glm::vec3 point1, glm::vec3 point2, glm::vec3 point3, glm::vec3 point4);
+//Inverse lengthAt function
+float inverseArcLengthAt(float s, int &segment);
+//lengthAt function (binary search)
+int searchByLength(int left, int right, float s);
+
+bool map_value_compare(std::pair<float, float> a, std::pair<float, float> b) {
+	return a.second < b.second;
+}
+glm::vec3 mySpaceCurve(float u, glm::vec3 point1, glm::vec3 point2, glm::vec3 point3, glm::vec3 point4)
+{
+	return 0.5f * ((knots[0][0] * point1 + knots[0][1] * point2 + knots[0][2] * point3 + knots[0][3] * point4) +
+		(knots[1][0] * point1 + knots[1][1] * point2 + knots[1][2] * point3 + knots[1][3] * point4) * u +
+		(knots[2][0] * point1 + knots[2][1] * point2 + knots[2][2] * point3 + knots[2][3] * point4) * u * u +
+		(knots[3][0] * point1 + knots[3][1] * point2 + knots[3][2] * point3 + knots[3][3] * point4) * u * u * u);
+
+}
+
+float inverseArcLengthAt(float s, int &segment)
+{
+	int i = searchByLength(0, arcLength.size() - 1, s);
+
+	segment = myPathData[0].segmentNum;
+	if (i == -1)
+		return myPathData[0].u;
+
+	float u_i = myPathData[i].u;
+	float s_i = myPathData[i].length;
+	segment = myPathData[i].segmentNum;
+
+	if (i == arcLength.size() - 1)
+		return u_i;
+
+	float s_i1 = myPathData[i + 1].length;
+
+	float k = (s - s_i) / (s_i1 - s_i);
+	float d = k * delta;
+
+	return u_i + d;
+}
+
+int searchByLength(int left, int right, float s)
+{
+	if (right >= left)
+	{
+		int mid = left + (right - left) / 2;
+
+		if (arcLength[mid] == s) return mid;
+
+		if (arcLength[mid] > s) return searchByLength(left, mid - 1, s);
+
+		return searchByLength(mid + 1, right, s);
+	}
+
+	return left - 1;
+}
+
+#pragma endregion
+
 void Run()
 {
 	window.initWindow();
 	lastX = window.windowWidth()  / 2.0f;
 	lastY = window.windowHeight() / 2.0f;
+	camera.Position = glm::vec3(0.0f, 1.0f, 10.0f);
 
 	glEnable(GL_DEPTH_TEST);
 	
@@ -52,8 +145,8 @@ void Run()
 	SkinnedMesh mesh;
 	//mesh.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/guard/boblampclean.md5mesh");
 	//mesh.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/nanosuit/nanosuit.obj");
-	mesh.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/Jumping.fbx");
-	mesh.AddAnimation("../../Phoenix/RendererOpenGL/App/Resources/Objects/Walking.fbx");
+	mesh.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/Walking.dae");
+	//mesh.AddAnimation("../../Phoenix/RendererOpenGL/App/Resources/Objects/Walking.fbx");
 	//mesh.AddAnimation("../../Phoenix/RendererOpenGL/App/Resources/Objects/Hip Hop Dancing.fbx");
 
 	glUseProgram(skinningShader.mId);
@@ -66,6 +159,58 @@ void Run()
 	float timer = 0.0f;
 	bool drawJoints = false;
 	bool drawBones = false;
+
+	GLuint VAO, VBO;
+	glGenVertexArrays(1, &VAO);
+	glBindVertexArray(VAO);
+	glGenBuffers(1, &VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(plot[0]) * 700, &plot[0], GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glBindVertexArray(0);
+
+	//knot sequence for the curve
+	knots[0][0] = 0.0f;   knots[0][1] = 2.0f;   knots[0][2] = 0.0f;   knots[0][3] = 0.0f;
+	knots[1][0] = -1.0f;  knots[1][1] = 0.0f;   knots[1][2] = 1.0f;   knots[1][3] = 0.0f;
+	knots[2][0] = 2.0f;   knots[2][1] = -5.0f;  knots[2][2] = 4.0f;   knots[2][3] = -1.0f;
+	knots[3][0] = -1.0f;  knots[3][1] = 3.0f;   knots[3][2] = -3.0f;  knots[3][3] = 1.0f;
+
+	int k = 0;
+	float totalLength = 0.0f;
+	std::vector<glm::vec3> plot;
+	//calculating length of the curve
+	for (int i = 0; i < POINTS_NUM - 3; i++)
+		for (float t = 0; t < 1.0f - delta; t += delta)
+		{
+			arcLengthStruct pointData;
+			pointData.length = totalLength + glm::distance(mySpaceCurve(t, curvePoints[i], curvePoints[i + 1], curvePoints[i + 2], curvePoints[i + 3]),
+				mySpaceCurve(t + delta, curvePoints[i], curvePoints[i + 1], curvePoints[i + 2], curvePoints[i + 3]));
+			pointData.segmentNum = i;
+			pointData.u = t;
+
+			totalLength = pointData.length;
+
+			myPathData.push_back(pointData);
+			plot.push_back(mySpaceCurve(t, curvePoints[i], curvePoints[i + 1], curvePoints[i + 2], curvePoints[i + 3]));
+		}
+
+	//normalizing
+	for (auto it = myPathData.begin(); it != myPathData.end(); it++)
+	{
+		it->length /= totalLength;
+		arcLength.push_back(it->length);
+	}
+
+	//initial angle
+	glm::vec3 currAngle = glm::normalize(mySpaceCurve(delta, curvePoints[0], curvePoints[0 + 1], curvePoints[0 + 2], curvePoints[0 + 3]) -
+		mySpaceCurve(0.0f, curvePoints[0], curvePoints[0 + 1], curvePoints[0 + 2], curvePoints[0 + 3]));//derivativeOfMySpaceCurve(0.0f, curvePoints[0], curvePoints[0 + 1], curvePoints[0 + 2], curvePoints[0 + 3]);
+
+	float speed = 0.085f;
+	float currentDistance = 0.0f;
+	float t = 0.0f;
+
+	float var = 0.009f;
 
 	int animationIndex = 0;
 	while (!window.windowShouldClose() && !exitOnESC)
@@ -94,7 +239,7 @@ void Run()
 
 			glm::mat4 model = glm::mat4(1.0f);
 			model = glm::scale(model, glm::vec3(10.0f, 0.3f, 10.0f));
-			model = glm::translate(model, glm::vec3(0.0f, -4.0f, 0.0f));
+			model = glm::translate(model, glm::vec3(0.0f, -1.0f, 0.0f));
 			lightingShader.SetUniform("model", &model);
 
 			// render the cube
@@ -112,16 +257,88 @@ void Run()
 
 			pOpenglRenderer->RenderCube();
 
+
+#pragma region ANIM2_MODEL
+
+			//calculating speed (with easy-in/easy-out at the ends)
+			float v;
+			int segment;
+			float v0 = 2 / (1 - 0.2 + 0.8);
+			if (t < 0.2)
+				v = v0 * t / 0.2;
+			else if (t > 0.8)
+				v = v0 * (1 - t) / (1 - 0.8);
+			else
+				v = v0;
+
+			//getting parameter at specific time
+			float u = inverseArcLengthAt(currentDistance, segment);
+
+			currentDistance += deltaTime * v * speed;
+
+			t += deltaTime * speed;
+			if (t >= 1.0f)
+			{
+				t = 0.0f;
+				currentDistance = 0.0f;
+			}
+
+			glm::vec3 translationPos;
+			glm::vec3 rotationVec;
+			glm::vec3 W;
+
+			//calculating translation
+			translationPos = mySpaceCurve(u, curvePoints[segment], curvePoints[segment + 1], curvePoints[segment + 2], curvePoints[segment + 3]);
+
+			//calcualting rotation
+			if (u + delta >= 1.0f)
+				W = translationPos - mySpaceCurve(u - delta, curvePoints[segment], curvePoints[segment + 1], curvePoints[segment + 2], curvePoints[segment + 3]);
+			else
+				W = mySpaceCurve(u + delta, curvePoints[segment], curvePoints[segment + 1], curvePoints[segment + 2], curvePoints[segment + 3]) - translationPos;
+
+			rotationVec = glm::normalize(W);
+
+#pragma endregion
+
+			glm::mat4 pathModel(1.0f);
+			//pathModel = glm::translate(pathModel, glm::vec3(0.0f, -1.5f, 0.0f)); // translate it down so it's at the center of the scene
+
+			glUseProgram(lampShader.mId);
+			lampShader.SetUniform("model", &pathModel);
+			lampShader.SetUniform("projection", &projection);
+			lampShader.SetUniform("view", &view);
+
+			/*glBindVertexArray(VAO);
+			glBindBuffer(GL_ARRAY_BUFFER, VBO);
+			*/
+			
+			
+			glUseProgram(lampShader.mId);
+			glBindVertexArray(VAO);
+			//pOpenglRenderer->RenderCube();
+			glPointSize(10.0f);
+			glDrawArrays(GL_LINES, 0, 700);
+
+			//glBindVertexArray(VAO);
+			//glDrawArrays(GL_TRIANGLES, 0, 10);
+
 			// skinning
 			tinystl::vector<aiMatrix4x4> Transforms, BoneTransforms;
 			mesh.BoneTransform(timer / 1000.0f, Transforms, BoneTransforms);
 			
+
 			model = glm::mat4(1.0f);
-			model = glm::translate(model, glm::vec3(0.0f, -1.0f, 0.0f));
+			//model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
 			// for guard
 			/*model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 			model = glm::scale(model, glm::vec3(0.05f, 0.05f, 0.05f));*/
-			model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
+			/*model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0, 0.0, 0.0));
+			model = glm::rotate(model, glm::radians(180.0f), glm::vec3(1.0, 0.0, 0.0));
+			model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0, 1.0, 0.0));
+			model = glm::rotate(model, glm::radians(-35.0f), glm::vec3(0.0, 0.0, 1.0));*/
+			model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f) + translationPos); // translate it down so it's at the center of the scene
+			model = glm::rotate(model, glm::radians(30.0f) - acos(glm::dot(currAngle, rotationVec)), glm::vec3(0.0f, 1.0f, 0.0f));
+			model = glm::scale(model, glm::vec3(var, var, var));
 
 			if(!drawJoints && !drawBones)
 			{
@@ -212,6 +429,7 @@ void Run()
 
 					ImGui::Checkbox("Draw Joints", &drawJoints);
 					ImGui::Checkbox("Draw Bones", &drawBones);
+					ImGui::InputFloat("var", &var, 0.001f, 1.0f, 3.0f);
 					
 					ImGui::InputInt("Animation Index", &animationIndex);
 					mesh.SetCurrentAnimation(animationIndex);
