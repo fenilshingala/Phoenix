@@ -71,6 +71,8 @@
     <None Include="..\RendererOpenGL\App\Resources\Shaders\deferred_shading.frag" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\deferred_shading.vert" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\equirectangular_to_cubemap.frag" />
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\gaussianHBlur.comp" />
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\gaussianVBlur.comp" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\g_buffer.frag" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\g_buffer.vert" />
     <None Include="..\RendererOpenGL\App\Resources\Shaders\irradiance_convolution.frag" />

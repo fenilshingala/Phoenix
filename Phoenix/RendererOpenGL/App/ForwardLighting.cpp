@@ -24,6 +24,51 @@ void RenderScene(ShaderProgram& shader)
 	pOpenGLRenderer->RenderCube();
 }
 
+#define BLUR_SHADER_THREADS 256
+struct UniformBlurKernelBlock {
+	float m_weights[BLUR_SHADER_THREADS];
+	int m_kernelSize;
+	int m_widthResolution;
+	int m_heightResolution;
+};
+
+struct UniformBuffer {
+	unsigned int m_bufferId;
+	size_t m_bufferSize;
+	unsigned int draw_type_;
+};
+
+void ComputeKernelWeights(int kernelSize, int width, int height, UniformBlurKernelBlock & block)
+{
+	int totalWeights = 2 * kernelSize + 1;
+	assert(totalWeights <= BLUR_SHADER_THREADS, "Adjust the kernel size");
+
+	float s = kernelSize * 0.5f;
+	float oneOverS = 1.0f / s;
+	float sum = 0.0f;
+	int index = 0;
+
+
+	for (int i = kernelSize; i >= 0; --i) {
+		block.m_weights[index] = static_cast<float>(expl(-0.5f*(i *oneOverS)*(i *oneOverS)));
+		block.m_weights[totalWeights - index - 1] = block.m_weights[index];
+		++index;
+	}
+
+	//normalize weights
+	for (int i = 0; i < totalWeights; ++i) {
+		sum += block.m_weights[i];
+	}
+
+	for (int i = 0; i < totalWeights; ++i) {
+		block.m_weights[i] /= sum;
+	}
+
+	block.m_kernelSize = kernelSize;
+	block.m_heightResolution = height;
+	block.m_widthResolution = width;
+}
+
 void Run()
 {
 	window.initWindow();
@@ -47,27 +92,55 @@ void Run()
 
 	ShaderProgram debugDepthQuad("../../Phoenix/RendererOpenGL/App/Resources/Shaders/shadow_debug.vert",
 								 "../../Phoenix/RendererOpenGL/App/Resources/Shaders/shadow_debug.frag");
+	
+	// COMPUTE SHADER
+	ShaderProgram gaussianHBlur("../../Phoenix/RendererOpenGL/App/Resources/Shaders/gaussianHBlur.comp");
+	ShaderProgram gaussianVBlur("../../Phoenix/RendererOpenGL/App/Resources/Shaders/gaussianVBlur.comp");
+
 	// configure depth map FBO
 	// -----------------------
 	const unsigned int SHADOW_WIDTH = 2048, SHADOW_HEIGHT = 2048;
-	unsigned int depthMapFBO;
+
+	int kernel_size_ = 5;
+	UniformBlurKernelBlock kernel_block_;
+	ComputeKernelWeights(kernel_size_, SHADOW_WIDTH, SHADOW_HEIGHT, kernel_block_);
+	UniformBuffer kernel_buffer_;
+	kernel_buffer_.m_bufferSize = sizeof(UniformBlurKernelBlock);
+	glGenBuffers(1, &kernel_buffer_.m_bufferId);
+
+	unsigned int depthMapFBO, depthBuffer;
 	glGenFramebuffers(1, &depthMapFBO);
-	// create depth texture
+	
 	unsigned int depthMap;
 	glGenTextures(1, &depthMap);
 	glBindTexture(GL_TEXTURE_2D, depthMap);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	// attach depth texture as FBO's depth buffer
+	
 	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
-	glDrawBuffer(GL_NONE);
-	glReadBuffer(GL_NONE);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, depthMap, 0);
+	unsigned int attachments[1] = { GL_COLOR_ATTACHMENT0 };
+	glDrawBuffers(1, attachments);
+
+	// depth render buffer
+	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+	glGenRenderbuffers(1, &depthBuffer);
+	glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_WIDTH);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthBuffer);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+	unsigned int blurredMomentDepth;
+	glGenTextures(1, &blurredMomentDepth);
+	glBindTexture(GL_TEXTURE_2D, blurredMomentDepth);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
 	// shader configuration
 	// --------------------
@@ -114,6 +187,30 @@ void Run()
 			glCullFace(GL_BACK);
 
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+			// BLUR SHADOW MAP
+
+			glUseProgram(gaussianHBlur.mId);
+			
+			
+			glBindImageTexture(0, depthMap, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+			glUniform1i(GL_TEXTURE0, (int)0);
+
+			glBindImageTexture(1, blurredMomentDepth, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+			glUniform1i(GL_TEXTURE1, (int)1);
+
+			//BindKernelBuffer(shader, kernel_block_);
+			GLuint bindpoint = 0;
+			GLuint loc = glGetUniformBlockIndex(gaussianHBlur.mId, "BlurKernel");
+			glUniformBlockBinding(gaussianHBlur.mId, loc, bindpoint);
+			glBindBufferBase(GL_UNIFORM_BUFFER, bindpoint, kernel_buffer_.m_bufferId);
+			glBufferData(GL_UNIFORM_BUFFER, kernel_buffer_.m_bufferSize, (void*)&kernel_block_, GL_STATIC_DRAW);
+			glDispatchCompute(SHADOW_WIDTH, SHADOW_HEIGHT / BLUR_SHADER_THREADS, 1);
+			//glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+			glUseProgram(0);
+
+			////////////////////////////
 			
 
 			// reset viewport
@@ -195,6 +292,7 @@ void Run()
 	/*glDeleteVertexArrays(1, &cubeVAO);
 	glDeleteVertexArrays(1, &lightVAO);
 	glDeleteBuffers(1, &VBO);*/
+	glDeleteBuffers(1, &kernel_buffer_.m_bufferId);
 
 	window.exitWindow();
 }

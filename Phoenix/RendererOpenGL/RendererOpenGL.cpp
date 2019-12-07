@@ -102,6 +102,62 @@ void Camera::updateCameraVectors()
 
 std::hash<std::string> hasher;
 
+ShaderProgram::ShaderProgram(std::string computeShaderPath)
+{
+	std::string line;
+	std::stringstream ss[2];
+	int compShader;
+
+	// compute
+	{
+		std::ifstream compStream(computeShaderPath.c_str());
+		while (getline(compStream, line))
+		{
+			ss[0] << line << '\n';
+		}
+		std::string compShaderSource = ss[0].str();
+		const char* charData = compShaderSource.c_str();
+
+		compShader = glCreateShader(GL_COMPUTE_SHADER);
+		glShaderSource(compShader, 1, &charData, NULL);
+		glCompileShader(compShader);
+
+		int success;
+		glGetShaderiv(compShader, GL_COMPILE_STATUS, &success);
+		assert(success);
+	}
+
+	mId = glCreateProgram();
+	glAttachShader(mId, compShader);
+	glLinkProgram(mId);
+
+	int success;
+	glGetProgramiv(mId, GL_LINK_STATUS, &success);
+	assert(success);
+	glDeleteShader(compShader);
+
+	int32_t count, length, size;
+	GLenum type;
+	const uint32_t bufferSize = 256;
+	char name[bufferSize] = {};
+
+	glGetProgramiv(mId, GL_ACTIVE_ATTRIBUTES, &count);
+	for (int32_t i = 0; i < count; ++i)
+	{
+		glGetActiveAttrib(mId, i, bufferSize, &length, &size, &type, name);
+	}
+
+	glGetProgramiv(mId, GL_ACTIVE_UNIFORMS, &count);
+	for (int32_t i = 0; i < count; ++i)
+	{
+		glGetActiveUniform(mId, i, bufferSize, &length, &size, &type, name);
+		Uniform uniformInfo;
+		uniformInfo.location = glGetUniformLocation(mId, name);
+		uniformInfo.type = type;
+		mUniformVarMap.insert({ hasher(std::string(name)), uniformInfo });
+	}
+}
+
 ShaderProgram::ShaderProgram(std::string vertexShaderPath, std::string fragmentShaderPath)
 {
 	std::string line;

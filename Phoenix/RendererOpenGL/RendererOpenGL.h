@@ -29,6 +29,7 @@ struct Uniform
 class ShaderProgram
 {
 public:
+	ShaderProgram(std::string computeShaderPath);
 	ShaderProgram(std::string vertexShaderPath, std::string fragmentShaderPath);
 	~ShaderProgram();
 

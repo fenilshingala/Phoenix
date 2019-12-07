@@ -244,5 +244,11 @@
     <None Include="..\RendererOpenGL\App\Resources\Shaders\background.frag">
       <Filter>Resource Files\Shaders\ForwardLighting\IBL</Filter>
     </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\gaussianHBlur.comp">
+      <Filter>Resource Files\Shaders\ForwardLighting</Filter>
+    </None>
+    <None Include="..\RendererOpenGL\App\Resources\Shaders\gaussianVBlur.comp">
+      <Filter>Resource Files\Shaders\ForwardLighting</Filter>
+    </None>
   </ItemGroup>
 </Project>
