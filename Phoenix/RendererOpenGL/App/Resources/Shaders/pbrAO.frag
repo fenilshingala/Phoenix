@@ -146,7 +146,7 @@ void main()
     vec3 kS = F;
     vec3 kD = 1.0 - kS;
     kD *= 1.0 - metallic;
-    
+
     vec3 irradiance	  = texture(irradianceMap, N).rgb;
     vec3 diffuse      = irradiance * albedo;
     
@@ -163,7 +163,7 @@ void main()
     // HDR tonemapping
     color = color / (color + vec3(1.0));
     // gamma correct
-    color = pow(color, vec3(1.0/2.2)); 
+    color = pow(color, vec3(1.0/2.2));
 
     FragColor = vec4(color, 1.0);
 }

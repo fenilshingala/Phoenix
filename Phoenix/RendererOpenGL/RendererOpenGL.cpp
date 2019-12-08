@@ -107,6 +107,7 @@ ShaderProgram::ShaderProgram(std::string vertexShaderPath, std::string fragmentS
 	std::string line;
 	std::stringstream ss[2];
 	int vertexShader, fragmentShader;
+	GLchar error[1024] = { 0 };
 
 	// vert
 	{
@@ -124,6 +125,11 @@ ShaderProgram::ShaderProgram(std::string vertexShaderPath, std::string fragmentS
 		
 		int success;
 		glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+		if (!success)
+		{
+			glGetShaderInfoLog(vertexShader, sizeof(error), NULL, error);
+			std::cerr << "Shader compilation failed for file " << vertexShaderPath << "\nIssue: " << error << std::endl;
+		}
 		assert(success);
 	}
 
@@ -143,6 +149,11 @@ ShaderProgram::ShaderProgram(std::string vertexShaderPath, std::string fragmentS
 		
 		int success;
 		glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+		if (!success)
+		{
+			glGetShaderInfoLog(fragmentShader, sizeof(error), NULL, error);
+			std::cerr << "Shader compilation failed for file " << vertexShaderPath << "\nIssue: " << error << std::endl;
+		}
 		assert(success);
 	}
 

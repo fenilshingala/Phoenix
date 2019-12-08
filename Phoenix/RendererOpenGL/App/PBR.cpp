@@ -29,6 +29,16 @@ float lerp(float a, float b, float f)
 	return a + f * (b - a);
 }
 
+void BlitTextureOnScreen(unsigned int a_FBO, int a_color_attachment_number, float a_iWindowWidth, float a_iWindowHeight)
+{
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, a_FBO);//
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	glReadBuffer(GL_COLOR_ATTACHMENT0 + a_color_attachment_number);
+	glBlitFramebuffer(0, 0, a_iWindowWidth, a_iWindowHeight, 0, 0, a_iWindowWidth, a_iWindowHeight, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
 void RenderScene(ShaderProgram& pbrShader)
 {
 	// titanium
@@ -123,7 +133,9 @@ void Run()
 	// SSAO uniform modifiers
 	int kernelSize = 64;
 	float radius = 0.5f;
-	float bias = 0.025f;
+	//float bias = 0.025f;
+	float scaleFactor = 0.0f;
+	float contrastFactor = 0.0f;
 
 	ShaderProgram shaderSSAOBlur("../../Phoenix/RendererOpenGL/App/Resources/Shaders/ssao.vert",
 								 "../../Phoenix/RendererOpenGL/App/Resources/Shaders/ssao_blur.frag");
@@ -132,7 +144,7 @@ void Run()
 	glUseProgram(shaderSSAO.mId);
 	shaderSSAO.SetUniform("gPosition", &zero);
 	shaderSSAO.SetUniform("gNormal", &one);
-	shaderSSAO.SetUniform("texNoise", &two);
+	//shaderSSAO.SetUniform("texNoise", &two);
 	glUseProgram(shaderSSAOBlur.mId);
 	shaderSSAOBlur.SetUniform("ssaoInput", &zero);
 
@@ -549,26 +561,34 @@ void Run()
 			glClear(GL_COLOR_BUFFER_BIT);
 			glUseProgram(shaderSSAO.mId);
 			// Send kernel + rotation
-			for (unsigned int i = 0; i < 64; ++i)
-			{
-				glUniform3fv(glGetUniformLocation(shaderSSAO.mId, ("samples[" + std::to_string(i) + "]").c_str()),
-							1, (GLfloat*)&ssaoKernel[i]);
-				//shaderSSAO.setVec3("samples[" + std::to_string(i) + "]", ssaoKernel[i]);
-			}
-			glm::vec2 noiseScale((float)(window.windowWidth() / 4), (float)(window.windowHeight() / 4));
-			shaderSSAO.SetUniform("projection", &projection);
-			shaderSSAO.SetUniform("kernelSize", &kernelSize);
+			//for (unsigned int i = 0; i < 64; ++i)
+			//{
+			//	glUniform3fv(glGetUniformLocation(shaderSSAO.mId, ("samples[" + std::to_string(i) + "]").c_str()),
+			//				1, (GLfloat*)&ssaoKernel[i]);
+			//	//shaderSSAO.setVec3("samples[" + std::to_string(i) + "]", ssaoKernel[i]);
+			//}
+			//glm::vec2 noiseScale((float)(window.windowWidth() / 4), (float)(window.windowHeight() / 4));
+			//shaderSSAO.SetUniform("projection", &projection);
+			shaderSSAO.SetUniform("kernelSamples", &kernelSize);
 			shaderSSAO.SetUniform("radius", &radius);
-			shaderSSAO.SetUniform("bias", &bias);
-			shaderSSAO.SetUniform("noiseScale", &noiseScale);
+			shaderSSAO.SetUniform("scale_factor", &scaleFactor);
+			shaderSSAO.SetUniform("contrast_factor", &contrastFactor);
+			
+			float width = (float)window.windowWidth();
+			float height = (float)window.windowHeight();
+			shaderSSAO.SetUniform("Width", &width);
+			shaderSSAO.SetUniform("Height", &height);
+			//shaderSSAO.SetUniform("bias", &bias);
+			//shaderSSAO.SetUniform("noiseScale", &noiseScale);
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, gPosition);
 			glActiveTexture(GL_TEXTURE1);
 			glBindTexture(GL_TEXTURE_2D, gNormal);
-			glActiveTexture(GL_TEXTURE2);
-			glBindTexture(GL_TEXTURE_2D, noiseTexture);
+			//glActiveTexture(GL_TEXTURE2);
+			//glBindTexture(GL_TEXTURE_2D, noiseTexture);
 			pOpenGLRenderer->RenderQuad();
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 
 			// 3. blur SSAO texture to remove noise
 			// ------------------------------------
@@ -643,6 +663,8 @@ void Run()
 			//glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap); // display prefilter map
 			pOpenGLRenderer->RenderCube();
 
+			//BlitTextureOnScreen(ssaoFBO, 0, window.windowWidth(), window.windowHeight());
+
 			// GUI
 			{
 				window.beginGuiFrame();
@@ -656,7 +678,8 @@ void Run()
 				ImGui::Checkbox("Ambient Occlusion", &isAmbientOcclusion);
 				ImGui::InputInt("Kernel Size", &kernelSize, 1, 0);
 				ImGui::InputFloat("Radius", &radius, 1.0f, 0.0f, 3);
-				ImGui::InputFloat("Bias", &bias, 1.0f, 0.0f, 3);
+				ImGui::InputFloat("Scale Factor", &scaleFactor, 1.0f, 0.0f, 3);
+				ImGui::InputFloat("Contrast Factor", &contrastFactor, 1.0f, 0.0f, 3);
 				ImGui::End();
 
 				glm::vec3 col = planeMaterial.getAlbedo();
