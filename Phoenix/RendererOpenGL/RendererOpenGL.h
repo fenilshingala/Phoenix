@@ -146,7 +146,7 @@ public:
 		return m_NumBones;
 	}
 
-	void BoneTransform(float TimeInSeconds, tinystl::vector<aiMatrix4x4>& Transforms, tinystl::vector<aiMatrix4x4>& BoneTransforms);
+	void BoneTransform(float TimeInSeconds, tinystl::vector<aiMatrix4x4>& Transforms, tinystl::vector<aiMatrix4x4>& BoneTransforms, float speed);
 
 	struct LineSegment
 	{

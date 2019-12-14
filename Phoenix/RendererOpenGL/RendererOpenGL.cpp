@@ -1360,12 +1360,12 @@ void SkinnedMesh::ReadNodeHeirarchy(float AnimationTime, const aiNode* pNode, co
 }
 
 
-void SkinnedMesh::BoneTransform(float TimeInSeconds, tinystl::vector<aiMatrix4x4>& Transforms, tinystl::vector<aiMatrix4x4>& BoneTransforms)
+void SkinnedMesh::BoneTransform(float TimeInSeconds, tinystl::vector<aiMatrix4x4>& Transforms, tinystl::vector<aiMatrix4x4>& BoneTransforms, float speed)
 {
 	aiMatrix4x4 Identity;
 
 	float TicksPerSecond = (float)(mAnimations[mCurrentAnimationIndex]->mTicksPerSecond != 0 ? mAnimations[mCurrentAnimationIndex]->mTicksPerSecond : 25.0f);
-	float TimeInTicks = TimeInSeconds * TicksPerSecond;
+	float TimeInTicks = TimeInSeconds * TicksPerSecond - speed;
 	float AnimationTime = fmod(TimeInTicks, (float)mAnimations[mCurrentAnimationIndex]->mDuration);
 
 	mLineSegments.clear();

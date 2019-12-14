@@ -126,6 +126,12 @@ int searchByLength(int left, int right, float s)
 
 void Run()
 {
+	//knot sequence for the curve
+	knots[0][0] = 0.0f;   knots[0][1] = 2.0f;   knots[0][2] = 0.0f;   knots[0][3] = 0.0f;
+	knots[1][0] = -1.0f;  knots[1][1] = 0.0f;   knots[1][2] = 1.0f;   knots[1][3] = 0.0f;
+	knots[2][0] = 2.0f;   knots[2][1] = -5.0f;  knots[2][2] = 4.0f;   knots[2][3] = -1.0f;
+	knots[3][0] = -1.0f;  knots[3][1] = 3.0f;   knots[3][2] = -3.0f;  knots[3][3] = 1.0f;
+
 	window.initWindow();
 	lastX = window.windowWidth()  / 2.0f;
 	lastY = window.windowHeight() / 2.0f;
@@ -164,17 +170,7 @@ void Run()
 	glGenVertexArrays(1, &VAO);
 	glBindVertexArray(VAO);
 	glGenBuffers(1, &VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(plot[0]) * 700, &plot[0], GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glBindVertexArray(0);
-
-	//knot sequence for the curve
-	knots[0][0] = 0.0f;   knots[0][1] = 2.0f;   knots[0][2] = 0.0f;   knots[0][3] = 0.0f;
-	knots[1][0] = -1.0f;  knots[1][1] = 0.0f;   knots[1][2] = 1.0f;   knots[1][3] = 0.0f;
-	knots[2][0] = 2.0f;   knots[2][1] = -5.0f;  knots[2][2] = 4.0f;   knots[2][3] = -1.0f;
-	knots[3][0] = -1.0f;  knots[3][1] = 3.0f;   knots[3][2] = -3.0f;  knots[3][3] = 1.0f;
 
 	int k = 0;
 	float totalLength = 0.0f;
@@ -202,6 +198,7 @@ void Run()
 		arcLength.push_back(it->length);
 	}
 
+	
 	//initial angle
 	glm::vec3 currAngle = glm::normalize(mySpaceCurve(delta, curvePoints[0], curvePoints[0 + 1], curvePoints[0 + 2], curvePoints[0 + 3]) -
 		mySpaceCurve(0.0f, curvePoints[0], curvePoints[0 + 1], curvePoints[0 + 2], curvePoints[0 + 3]));//derivativeOfMySpaceCurve(0.0f, curvePoints[0], curvePoints[0 + 1], curvePoints[0 + 2], curvePoints[0 + 3]);
@@ -308,10 +305,12 @@ void Run()
 			lampShader.SetUniform("projection", &projection);
 			lampShader.SetUniform("view", &view);
 
-			/*glBindVertexArray(VAO);
-			glBindBuffer(GL_ARRAY_BUFFER, VBO);
-			*/
+			glBindVertexArray(VAO);
 			
+			glBindBuffer(GL_ARRAY_BUFFER, VBO);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(plot[0]) * 700, &plot[0], GL_STATIC_DRAW);
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 			
 			glUseProgram(lampShader.mId);
 			glBindVertexArray(VAO);
@@ -319,12 +318,12 @@ void Run()
 			glPointSize(10.0f);
 			glDrawArrays(GL_LINES, 0, 700);
 
-			//glBindVertexArray(VAO);
-			//glDrawArrays(GL_TRIANGLES, 0, 10);
+			/*glBindVertexArray(VAO);
+			glDrawArrays(GL_TRIANGLES, 0, 10);*/
 
 			// skinning
 			tinystl::vector<aiMatrix4x4> Transforms, BoneTransforms;
-			mesh.BoneTransform(timer / 1000.0f, Transforms, BoneTransforms);
+			mesh.BoneTransform(timer / 1000.0f, Transforms, BoneTransforms, t);
 			
 
 			model = glm::mat4(1.0f);
