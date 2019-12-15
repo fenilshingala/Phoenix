@@ -148,17 +148,20 @@ void Run()
 
 	OpenGLRenderer* pOpenglRenderer = new OpenGLRenderer();
 
-	SkinnedMesh mesh;
+	SkinnedMesh meshWalking, meshIdle;
 	//mesh.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/guard/boblampclean.md5mesh");
 	//mesh.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/nanosuit/nanosuit.obj");
-	mesh.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/Walking.dae");
+	meshWalking.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/Walking.dae");
+	meshIdle.LoadMesh("../../Phoenix/RendererOpenGL/App/Resources/Objects/Idle.dae");
 	//mesh.AddAnimation("../../Phoenix/RendererOpenGL/App/Resources/Objects/Walking.fbx");
 	//mesh.AddAnimation("../../Phoenix/RendererOpenGL/App/Resources/Objects/Hip Hop Dancing.fbx");
+
+	SkinnedMesh* pMesh = &meshIdle;
 
 	glUseProgram(skinningShader.mId);
 	int zero = 0;
 	skinningShader.SetUniform("gColorMap", &zero);
-	skinningShader.SetUniform("isAnim", &mesh.mIsAnim);
+	skinningShader.SetUniform("isAnim", &pMesh->mIsAnim);
 
 	window.initGui();
 
@@ -208,6 +211,7 @@ void Run()
 	float t = 0.0f;
 
 	float var = 0.009f;
+	float speedFactor = 1.0f;
 
 	int animationIndex = 0;
 	while (!window.windowShouldClose() && !exitOnESC)
@@ -321,9 +325,16 @@ void Run()
 			/*glBindVertexArray(VAO);
 			glDrawArrays(GL_TRIANGLES, 0, 10);*/
 
+			pMesh = t > 0.05 && t < 0.95 ? &meshWalking : &meshIdle;
+
+			speedFactor = t < 0.1f ? t / 0.1f :
+						  t > 0.9f ? (1.0f - t) / 0.1f : 1.0f;
+
+			speedFactor = 1.0f - speedFactor;
+
 			// skinning
 			tinystl::vector<aiMatrix4x4> Transforms, BoneTransforms;
-			mesh.BoneTransform(timer / 1000.0f, Transforms, BoneTransforms, t);
+			pMesh->BoneTransform(timer / 1000.0f, Transforms, BoneTransforms, speedFactor);
 			
 
 			model = glm::mat4(1.0f);
@@ -355,7 +366,7 @@ void Run()
 				skinningShader.SetUniform("view", &view);
 				skinningShader.SetUniform("model", &model);
 				
-				mesh.Render();
+				pMesh->Render();
 			}
 
 
@@ -384,13 +395,13 @@ void Run()
 				lampShader.SetUniform("projection", &projection);
 				lampShader.SetUniform("view", &view);
 
-				uint32_t size = (uint32_t)mesh.mLineSegments.size();
+				uint32_t size = (uint32_t)pMesh->mLineSegments.size();
 				tinystl::vector<float> vertices(size * 2 * 3);
 
 				for (uint32_t i = 1; i < size; ++i)
 				{
-					aiMatrix4x4 parent = mesh.mLineSegments[i].mParent;
-					aiMatrix4x4 child = mesh.mLineSegments[i].mChild;
+					aiMatrix4x4 parent = pMesh->mLineSegments[i].mParent;
+					aiMatrix4x4 child = pMesh->mLineSegments[i].mChild;
 
 					aiVector3D parentPos, parentScale, parentRot;
 					aiVector3D childPos, childScale, childRot;
@@ -431,7 +442,7 @@ void Run()
 					ImGui::InputFloat("var", &var, 0.001f, 1.0f, 3.0f);
 					
 					ImGui::InputInt("Animation Index", &animationIndex);
-					mesh.SetCurrentAnimation(animationIndex);
+					pMesh->SetCurrentAnimation(animationIndex);
 
 				ImGui::End();
 

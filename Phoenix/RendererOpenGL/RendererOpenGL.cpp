@@ -934,7 +934,7 @@ bool SkinnedMesh::LoadMesh(const std::string& Filename)
 
 	bool Ret = false;
 
-	m_pScene = m_Importer.ReadFile(Filename.c_str(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+	m_pScene = m_Importer.ReadFile(Filename.c_str(), aiProcess_Triangulate | aiProcess_CalcTangentSpace);
 	m_pScene = m_Importer.GetOrphanedScene();
 
 	if (m_pScene)
