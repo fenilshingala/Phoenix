@@ -1365,7 +1365,7 @@ void SkinnedMesh::BoneTransform(float TimeInSeconds, tinystl::vector<aiMatrix4x4
 	aiMatrix4x4 Identity;
 
 	float TicksPerSecond = (float)(mAnimations[mCurrentAnimationIndex]->mTicksPerSecond != 0 ? mAnimations[mCurrentAnimationIndex]->mTicksPerSecond : 25.0f);
-	float TimeInTicks = TimeInSeconds * TicksPerSecond - speed;
+	float TimeInTicks = (TimeInSeconds * TicksPerSecond - speed)*0.9f;
 	float AnimationTime = fmod(TimeInTicks, (float)mAnimations[mCurrentAnimationIndex]->mDuration);
 
 	mLineSegments.clear();

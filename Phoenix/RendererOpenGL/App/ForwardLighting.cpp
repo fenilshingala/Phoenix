@@ -289,7 +289,10 @@ void Run()
 			glm::vec3 W;
 
 			//calculating translation
-			translationPos = mySpaceCurve(u, curvePoints[segment], curvePoints[segment + 1], curvePoints[segment + 2], curvePoints[segment + 3]);
+			if (t > 0.05 && t < 0.95f)
+			{
+				translationPos = mySpaceCurve(u, curvePoints[segment], curvePoints[segment + 1], curvePoints[segment + 2], curvePoints[segment + 3]);
+			}
 
 			//calcualting rotation
 			if (u + delta >= 1.0f)
@@ -330,12 +333,12 @@ void Run()
 			speedFactor = t < 0.1f ? t / 0.1f :
 						  t > 0.9f ? (1.0f - t) / 0.1f : 1.0f;
 
-			speedFactor = 1.0f - speedFactor;
+			//speedFactor = 1.0f - speedFactor;
 
 			// skinning
 			tinystl::vector<aiMatrix4x4> Transforms, BoneTransforms;
 			pMesh->BoneTransform(timer / 1000.0f, Transforms, BoneTransforms, speedFactor);
-			
+			//myModel = curveTime > 0.1f && curveTime < 0.99 ? modelWalk : modelIdle;
 
 			model = glm::mat4(1.0f);
 			//model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
@@ -348,7 +351,7 @@ void Run()
 			model = glm::rotate(model, glm::radians(-35.0f), glm::vec3(0.0, 0.0, 1.0));*/
 			model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f) + translationPos); // translate it down so it's at the center of the scene
 			model = glm::rotate(model, glm::radians(30.0f) - acos(glm::dot(currAngle, rotationVec)), glm::vec3(0.0f, 1.0f, 0.0f));
-			model = glm::scale(model, glm::vec3(var, var, var));
+			model = glm::scale(model, glm::vec3(0.00825, 0.00825, 0.00825));
 
 			if(!drawJoints && !drawBones)
 			{
