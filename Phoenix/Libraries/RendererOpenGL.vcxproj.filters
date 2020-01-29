@@ -105,6 +105,9 @@
     <ClCompile Include="..\RendererOpenGL\App\PBR.cpp">
       <Filter>Source Files\Examples</Filter>
     </ClCompile>
+    <ClCompile Include="..\RendererOpenGL\App\Boids.cpp">
+      <Filter>Source Files\Examples</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\Thirdparty\imgui\imconfig.h">

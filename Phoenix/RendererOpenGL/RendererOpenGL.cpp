@@ -661,6 +661,7 @@ OpenGLRenderer::~OpenGLRenderer()
 	glDeleteVertexArrays(1, &mCubeVAO);
 	glDeleteVertexArrays(1, &quadInstanceVAO);
 	glDeleteVertexArrays(1, &mQuadVAO);
+	glDeleteVertexArrays(1, &mLineVAO);
 }
 
 void OpenGLRenderer::RenderLine()

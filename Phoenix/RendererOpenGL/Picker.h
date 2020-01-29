@@ -6,4 +6,5 @@ void Run();
 	#define SCENE_SPONZA   0
 #define PHYSICS 0
 #define ANIMATION 0
-#define PBR 1
+#define PBR 0
+#define BOIDS 1
