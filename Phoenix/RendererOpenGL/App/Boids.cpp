@@ -15,7 +15,7 @@ void Run()
 	lastX = window.windowWidth() / 2.0f;
 	lastY = window.windowHeight() / 2.0f;
 
-	camera.Position = glm::vec3(0.0f, 2.0f, 10.0f);
+	camera.Position = glm::vec3(0.0f, 0.0f, 10.0f);
 
 	pOpenGLRenderer = new OpenGLRenderer();
 
@@ -26,13 +26,35 @@ void Run()
 							 "../../Phoenix/RendererOpenGL/App/Resources/Shaders/mesh.frag");
 	
 	window.initGui();
+	float near_plane = 0.1f, far_plane = 100.0f;
+	int one = 1;
 
 	while (!window.windowShouldClose() && !exitOnESC)
 	{
 		window.startFrame();
 
 		{
-			
+			glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+			glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)window.windowWidth() / (float)window.windowHeight(), near_plane, far_plane);
+			glm::mat4 view = camera.GetViewMatrix();
+			glUseProgram(meshShader.mId);
+			meshShader.SetUniform("projection", &projection);
+			meshShader.SetUniform("view", &view);
+			meshShader.SetUniform("instanced", &one);
+
+			InstanceData data[2];
+			data[0].color = glm::vec3(1.0f, 0.0f, 0.0f);
+			data[0].model = glm::mat4(0.5f);
+			data[0].model = glm::translate(data[0].model, glm::vec3(-5.0f, 0.0f, 0.0f));
+			data[1].color = glm::vec3(0.0f, 1.0f, 0.0f);
+			data[1].model = glm::mat4(0.5f);
+			data[1].model = glm::translate(data[0].model, glm::vec3(5.0f, 0.0f, 0.0f));
+
+			pOpenGLRenderer->UpdateQuadInstanceBuffer(2*sizeof(InstanceData), data);
+			pOpenGLRenderer->RenderQuadInstanced(2);
+
 			// GUI
 			{
 				window.beginGuiFrame();
