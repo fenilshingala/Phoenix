@@ -9,26 +9,37 @@
 #include <TINYSTL/vector.h>
 #include <TINYSTL/string.h>
 
-struct GLFWwindow;
-typedef void(keyCallBackSignature)(GLFWwindow*, int, int, int, int);
-typedef void(resizeCallBackSignature)(GLFWwindow*, int, int);
+//struct GLFWwindow;
+struct SDL_window;
+//typedef void(keyCallBackSignature)(GLFWwindow*, int, int, int, int);
+//typedef void(resizeCallBackSignature)(GLFWwindow*, int, int);
 
 class VulkanRenderer
 {
 public:
-	VulkanRenderer() : WIDTH(800), HEIGHT(600), window(nullptr), validationLayers()
+	VulkanRenderer() :
+	WIDTH(800), HEIGHT(600), suitableWidth(800), suitableHeight(600), exitProgram(false), window(NULL), framebufferResized(false), framebufferMinimized(false),
+	instance(VK_NULL_HANDLE), physicalDevice(VK_NULL_HANDLE), device(VK_NULL_HANDLE), depthEnabled(false),
+	graphicsQueue(VK_NULL_HANDLE), presentQueue(VK_NULL_HANDLE), surface(VK_NULL_HANDLE),
+	swapChain(VK_NULL_HANDLE), swapChainImages(), swapChainImageViews(), swapChainImageFormat(VK_FORMAT_UNDEFINED), swapChainExtent({800, 600}),
+	shaderModules(), renderPass(VK_NULL_HANDLE), descriptorSetLayout(VK_NULL_HANDLE), pipelineLayout(VK_NULL_HANDLE), graphicsPipeline(VK_NULL_HANDLE),
+	swapChainFramebuffers(), commandPool(VK_NULL_HANDLE), commandBuffers(), vertexBuffer(VK_NULL_HANDLE), vertexBufferMemory(VK_NULL_HANDLE),
+	indexBuffer(VK_NULL_HANDLE), indexBufferMemory(VK_NULL_HANDLE), uniformBuffers(VK_NULL_HANDLE), uniformBuffersMemory(VK_NULL_HANDLE),
+	textureImage(VK_NULL_HANDLE), textureImageMemory(VK_NULL_HANDLE), textureImageView(VK_NULL_HANDLE), textureSampler(VK_NULL_HANDLE),
+	depthImage(VK_NULL_HANDLE), depthImageMemory(VK_NULL_HANDLE), depthImageView(VK_NULL_HANDLE),
+	descriptorPool(VK_NULL_HANDLE), descriptorSets(), imageAvailableSemaphores(), renderFinishedSemaphores(), validationLayers(),
+	debugMessenger(VK_NULL_HANDLE)
 	{
 		validationLayers.emplace_back("VK_LAYER_LUNARG_standard_validation");
 	}
+
 	~VulkanRenderer()
 	{
 		validationLayers.clear();
 	}
 
 	// WINDOW
-	void initWindow(int _WIDTH = 800, int _HEIGHT = 600);
-	void setFramebufferSizeCallback(resizeCallBackSignature&);
-	void setKeyCallback(keyCallBackSignature&);
+	void initWindow();
 	void pollEvents();
 	void waitEvents();
 	void updateInputs();
@@ -48,14 +59,16 @@ public:
 private:
 	int WIDTH;
 	int HEIGHT;
+	int suitableWidth;
+	int suitableHeight;
+	bool exitProgram;
 
 	// WINDOW
-	const char** getExtensions(uint32_t& _extensionCount);
+	void getExtensions(uint32_t& _extensionCount, const char*** pExtensionNames);
 	void createSurface();
-	//void getFramebufferSize(GLFWwindow* window, int* _width, int* _height);
-	
-
-	GLFWwindow* window;
+	void* window;
+	bool framebufferResized;
+	bool framebufferMinimized;
 
 	// VULKAN
 	void cleanupSwapChain();
@@ -108,10 +121,10 @@ private:
 
 	VkInstance instance;
 
-	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+	VkPhysicalDevice physicalDevice;
 	VkDevice device; // logical
 	
-	bool depthEnabled = false;
+	bool depthEnabled;
 
 	VkQueue graphicsQueue;
 	VkQueue presentQueue;
