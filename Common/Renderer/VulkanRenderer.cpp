@@ -5,6 +5,7 @@
 #include <fstream>
 #include <algorithm> // max min
 #include <chrono>
+#include <thread>
 
 #include <TINYSTL/unordered_map.h>
 #include <TINYSTL/unordered_set.h>
@@ -20,63 +21,147 @@
 ////////////////////////////////////////////////////
 ////////////////////// WINDOW //////////////////////
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
+#include "SDL_stdinc.h"
+#define SDL_MAIN_HANDLED
+#include <SDL.h>
+#include <SDL_keyboard.h>
+#include <SDL_vulkan.h>
+//#include <imgui/imgui_impl_sdl.h>				// TO DO
+//#include <imgui/imgui_impl_opengl3.h>
 
-#define NUM_OF_KEY_BINDINGS PH_KEY_MAX
-uint32_t keyPressBindings[NUM_OF_KEY_BINDINGS] = { 0 };
-uint32_t prevKeyPressBindings[NUM_OF_KEY_BINDINGS] = { 0 };
-uint32_t keyReleaseBindings[NUM_OF_KEY_BINDINGS] = { 0 };
-uint32_t prevKeyReleaseBindings[NUM_OF_KEY_BINDINGS] = { 0 };
+#define NUM_OF_KEY_BINDINGS PH_MAX_KEYS
+uint8_t keyPressBindings[NUM_OF_KEY_BINDINGS]		= { 0 };
+uint8_t prevKeyPressBindings[NUM_OF_KEY_BINDINGS]	= { 0 };
 
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+
+void VulkanRenderer::initWindow()
 {
-	if (key >= NUM_OF_KEY_BINDINGS)
+	SDL_DisplayMode mode = { 0 };
+
+	if (SDL_Init(SDL_INIT_VIDEO) < 0)
+	{
+		assert(0);
+	}
+
+	// Get current display mode of all displays.
+	for (int i = 0; i < SDL_GetNumVideoDisplays(); ++i)
+	{
+		SDL_DisplayMode current;
+
+		int should_be_zero = SDL_GetCurrentDisplayMode(i, &current);
+
+		if (should_be_zero != 0)
+		{// In case of error...
+			SDL_Log("Could not get display mode for video display #%d: %s", i, SDL_GetError());
+		}
+		else
+		{
+			if (mode.refresh_rate < current.refresh_rate)
+				mode = current;
+			// On success, print the current display mode.
+			SDL_Log("Display #%d: display mode is %dx%dpx @ %dhz.", i, current.w, current.h, current.refresh_rate);
+		}
+	}
+
+	float enforcedRatio = 16.0f / 9.0f;
+	WIDTH  = (int)(mode.w * 0.9);
+	HEIGHT = (int)(mode.h * 0.9);
+	if (WIDTH / HEIGHT < enforcedRatio)
+	{
+		if (HEIGHT < WIDTH)
+			HEIGHT = (int)(WIDTH / enforcedRatio);
+		else
+			WIDTH  = (int)(HEIGHT * enforcedRatio);
+	}
+
+	suitableWidth  = WIDTH;
+	suitableHeight = HEIGHT;
+
+	uint32_t flags = SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE;
+	#ifndef _DEBUG
+		flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+	#endif
+
+	window = SDL_CreateWindow("My Cool Vulkan Renderer!",
+		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+		WIDTH, HEIGHT,
+		flags);
+
+	SDL_GetWindowSize((SDL_Window*)window, &WIDTH, &HEIGHT);
+
+	if (window == NULL)
+	{
+		assert(0);
+	}
+}
+
+void VulkanRenderer::pollEvents()
+{
+	SDL_Event e;
+	while (SDL_PollEvent(&e) != 0)
+	{
+		//ImGui_ImplSDL2_ProcessEvent(&e);		// TO DO
+		switch (e.type)
+		{
+		case SDL_QUIT:
+			exitProgram = true;
+			break;
+		case SDL_WINDOWEVENT:
+			switch (e.window.event)
+			{
+			case SDL_WINDOWEVENT_RESIZED:
+				framebufferResized = true;
+				break;
+			case SDL_WINDOWEVENT_MINIMIZED:
+				framebufferMinimized = true;
+				break;
+			}
+		}
+	}
+}
+
+void VulkanRenderer::waitEvents()
+{
+	SDL_Event e;
+	while (SDL_WaitEvent(&e) != 0)
+	{
+		framebufferMinimized = false;
 		return;
-	if (action == GLFW_PRESS)
-		keyPressBindings[key] = 1;
-	if (action == GLFW_RELEASE)
-		keyReleaseBindings[key] = 1;
+	}
+	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 }
-
-bool framebufferResized = false;
-void resize_callback(GLFWwindow* window, int width, int height) { framebufferResized = true; }
-
-void VulkanRenderer::initWindow(int _WIDTH, int _HEIGHT)
+int VulkanRenderer::windowShouldClose() { return exitProgram; }
+void VulkanRenderer::destroyWindow() {	SDL_DestroyWindow((SDL_Window*)window);	SDL_Quit();	 }
+void VulkanRenderer::getExtensions(uint32_t& _extensionCount, const char*** pExtensionNames)
 {
-	WIDTH = _WIDTH;		HEIGHT = _HEIGHT;
-	glfwInit();
-	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-	window = glfwCreateWindow(WIDTH, HEIGHT, "Renderer", nullptr, nullptr);
-	setFramebufferSizeCallback(resize_callback);
-	setKeyCallback(key_callback);
+	if (!SDL_Vulkan_GetInstanceExtensions(NULL, &_extensionCount, NULL))
+		assert(0);
+	*pExtensionNames = (const char**)malloc(sizeof(const char*) * _extensionCount);
+	if (!SDL_Vulkan_GetInstanceExtensions((SDL_Window*)window, &_extensionCount, *pExtensionNames))
+		assert(0);
 }
-
-void VulkanRenderer::setFramebufferSizeCallback(resizeCallBackSignature& _function) { glfwSetFramebufferSizeCallback(window, _function); }
-void VulkanRenderer::setKeyCallback(keyCallBackSignature& _function) { glfwSetKeyCallback(window, _function); }
-void VulkanRenderer::pollEvents() { glfwPollEvents(); }
-void VulkanRenderer::waitEvents() { glfwWaitEvents(); }
-int VulkanRenderer::windowShouldClose() { return glfwWindowShouldClose(window); }
-void VulkanRenderer::destroyWindow() { glfwDestroyWindow(window);  glfwTerminate(); }
-const char** VulkanRenderer::getExtensions(uint32_t& _extensionCount) { return glfwGetRequiredInstanceExtensions(&_extensionCount); }
-static void getFramebufferSize(GLFWwindow* window, int* _width, int* _height) { glfwGetFramebufferSize(window, _width, _height); }
+static void getFramebufferSize(void* window, int* _width, int* _height){ SDL_Vulkan_GetDrawableSize((SDL_Window*)window, _width, _height); }
 
 void VulkanRenderer::updateInputs()
 {
-	memcpy(prevKeyPressBindings, keyPressBindings, NUM_OF_KEY_BINDINGS);
-	memset(keyPressBindings, 0, NUM_OF_KEY_BINDINGS);
+	int numberOfFetchedkeys = 0;
+	const uint8_t* pCurrentKeyStates = SDL_GetKeyboardState(&numberOfFetchedkeys);
 
-	memcpy(prevKeyReleaseBindings, keyReleaseBindings, NUM_OF_KEY_BINDINGS);
-	memset(keyReleaseBindings, 0, NUM_OF_KEY_BINDINGS);
+	if (numberOfFetchedkeys > NUM_OF_KEY_BINDINGS)
+		numberOfFetchedkeys = NUM_OF_KEY_BINDINGS;
+
+	SDL_memcpy(prevKeyPressBindings, keyPressBindings, 512 * sizeof(uint8_t));
+	SDL_memcpy(keyPressBindings, pCurrentKeyStates, numberOfFetchedkeys * sizeof(uint8_t));
 }
 
 bool VulkanRenderer::isKeyPressed(uint32_t _key)
 {
+	if (_key >= 512)
+		return false;
 	if (keyPressBindings[_key])
 		return true;
+
 	return false;
-	GLFW_KEY_0;
 }
 
 bool VulkanRenderer::isKeyTriggered(uint32_t _key)
@@ -90,7 +175,7 @@ bool VulkanRenderer::isKeyTriggered(uint32_t _key)
 ////////////////////////////////////////////////////
 ////////////////////// VULKAN //////////////////////
 
-const int MAX_FRAMES_IN_FLIGHT = 2;
+const int MAX_FRAMES_IN_FLIGHT = 3;
 size_t currentFrame = 0;
 tinystl::vector<VkFence> inFlightFences;
 
@@ -310,12 +395,11 @@ void VulkanRenderer::cleanupSwapChain()
 
 void VulkanRenderer::recreateSwapChain()
 {
-	getFramebufferSize(window, &WIDTH, &HEIGHT);
-	while (WIDTH == 0 || HEIGHT == 0)
+	while (framebufferMinimized)
 	{
-		getFramebufferSize(window, &WIDTH, &HEIGHT);
 		waitEvents();
 	}
+	getFramebufferSize(window, &WIDTH, &HEIGHT);
 
 	vkDeviceWaitIdle(device);
 
@@ -419,8 +503,8 @@ void VulkanRenderer::createInstance()
 
 	// required extensions
 	uint32_t extensionCount = 0;
-	const char** extensions;
-	extensions = getExtensions(extensionCount);
+	const char** extensions = NULL;
+	getExtensions(extensionCount, &extensions);
 
 	tinystl::vector<const char*> requiredExtensions(extensions, extensions + extensionCount);
 
@@ -451,9 +535,9 @@ void VulkanRenderer::createInstance()
 	createInfo.ppEnabledLayerNames = validationLayers.data();
 
 	// debug messenger
-	VkDebugUtilsMessengerCreateInfoEXT preDebugCreateInfo;
-	populateDebugMessengerCreateInfo(preDebugCreateInfo);
-	createInfo.pNext = &preDebugCreateInfo;
+	//VkDebugUtilsMessengerCreateInfoEXT preDebugCreateInfo;
+	//populateDebugMessengerCreateInfo(preDebugCreateInfo);
+	//createInfo.pNext = &preDebugCreateInfo;
 #else
 		createInfo.enabledLayerCount = 0;
 		createInfo.pNext = nullptr;
@@ -725,7 +809,7 @@ void VulkanRenderer::createLogicalDevice()
 
 void VulkanRenderer::createSurface()
 {
-	if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS)
+	if (SDL_Vulkan_CreateSurface((SDL_Window*)window, instance, &surface) != SDL_TRUE)
 	{
 		throw std::runtime_error("failed to create window surface!");
 	}
@@ -764,7 +848,7 @@ VkPresentModeKHR chooseSwapPresentMode(const tinystl::vector<VkPresentModeKHR>& 
 	return bestMode;
 }
 
-VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& capabilities, int& _WIDTH, int& _HEIGHT)
+VkExtent2D chooseSwapExtent(void* window, const VkSurfaceCapabilitiesKHR& capabilities, int& _WIDTH, int& _HEIGHT)
 {
 	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
 	{
@@ -1182,16 +1266,18 @@ void VulkanRenderer::createFramebuffers()
 	swapChainFramebuffers.resize(swapChainImageViews.size());
 	for (size_t i = 0; i < swapChainImageViews.size(); i++)
 	{
-		VkImageView attachments[] = {
-			swapChainImageViews[i],
-			depthImageView
-		};
-
+		tinystl::vector<VkImageView> attachments;
+		attachments.push_back(swapChainImageViews[i]);
+		if (depthEnabled)
+		{
+			attachments.push_back(depthImageView);
+		}
+		
 		VkFramebufferCreateInfo framebufferInfo = {};
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		framebufferInfo.renderPass = renderPass;
-		framebufferInfo.attachmentCount = sizeof(attachments) / sizeof(attachments[0]);
-		framebufferInfo.pAttachments = attachments;
+		framebufferInfo.attachmentCount = (uint32_t)attachments.size();
+		framebufferInfo.pAttachments = attachments.data();
 		framebufferInfo.width = swapChainExtent.width;
 		framebufferInfo.height = swapChainExtent.height;
 		framebufferInfo.layers = 1;
@@ -1364,7 +1450,7 @@ void VulkanRenderer::drawFrame()
 	presentInfo.pResults = nullptr; // Optional
 
 	result = vkQueuePresentKHR(presentQueue, &presentInfo);
-	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized)
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized || framebufferMinimized)
 	{
 		framebufferResized = false;
 		recreateSwapChain();
@@ -1736,7 +1822,7 @@ void VulkanRenderer::createDepthResources()
 	createImage(swapChainExtent.width, swapChainExtent.height, depthFormat,
 		VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		depthImage, depthImageMemory);
-	depthImageView = createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_COLOR_BIT);
+	depthImageView = createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 
 	transitionImageLayout(depthImage, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
