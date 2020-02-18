@@ -21,9 +21,7 @@ struct Vertex
 	glm::vec2 texCoord;
 
 	Vertex(glm::vec3 _pos, glm::vec3 _color, glm::vec2 _texCoord)
-	{
-		pos = _pos; color = _color; texCoord = _texCoord;
-	}
+	{ pos = _pos; color = _color; texCoord = _texCoord; }
 
 	static VkVertexInputBindingDescription getBindingDescription()
 	{
@@ -60,6 +58,7 @@ struct Vertex
 };
 tinystl::vector<Vertex> vertices;
 tinystl::vector<uint16_t> indices;
+
 PH_Buffer vertexBuffer;
 PH_Buffer indexBuffer;
 PH_Buffer uniformBuffers[3];
@@ -161,7 +160,6 @@ public:
 			uint32_t noOfImages =  GetNoOfSwapChains();
 			PH_BufferCreateInfo uniformBufferInfo;
 			uniformBufferInfo.bufferSize = (VkDeviceSize)(sizeof(UniformBufferObject));
-			uniformBufferInfo.data = 0;
 			uniformBufferInfo.bufferUsageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;	
 			uniformBufferInfo.memoryPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 			for (uint32_t i = 0; i < noOfImages; ++i)
@@ -170,6 +168,7 @@ public:
 			}
 		}
 
+		createDescriptorSetLayout();
 		createGraphicsPipeline();
 		createDescriptorSets();
 		createCommandBuffers();
@@ -178,10 +177,12 @@ public:
 	void UnLoad() override
 	{
 		// cleanup
+		PH_DeleteDescriptorSetLayout(&descriptorSetLayout);
 		PH_DeletePipelineLayout(pipelineLayout);
 		PH_DeleteGraphicsPipeline(graphicsPipeline);
 
-		for (uint32_t i = 0; i < 3; ++i)
+		const int maxImages = GetNoOfSwapChains();
+		for (int i = 0; i < maxImages; ++i)
 		{
 			DeleteBuffer(uniformBuffers[i]);
 		}
@@ -366,12 +367,12 @@ public:
 
 		PH_CreateDescriptorSets(descriptorSetLayout, descriptorSets);
 		
-		for (size_t i = 0; i < max_frames; i++)
+		for (size_t i = 0; i < max_frames; ++i)
 		{
 			VkDescriptorBufferInfo bufferInfo = {};
 			bufferInfo.buffer = uniformBuffers[i].buffer;
 			bufferInfo.offset = 0;
-			bufferInfo.range = sizeof(UniformBufferObject);
+			bufferInfo.range = sizeof(UniformBufferObject); // or VK_WHOLE_SIZE
 		
 			VkDescriptorImageInfo imageInfo = {};
 			imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -410,7 +411,7 @@ public:
 		float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
 		UniformBufferObject ubo = {};
-		ubo.model = glm::mat4(1.0f);// glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
 		ubo.proj[1][1] *= -1;
@@ -425,6 +426,8 @@ public:
 
 	void createCommandBuffers() override
 	{
+		PH_CreateCommandBuffers();
+
 		tinystl::vector<VkCommandBuffer> commandBuffers = GetCommandBuffers();
 
 		for (uint32_t i = 0; i < commandBuffers.size(); i++)
@@ -442,7 +445,7 @@ public:
 			VkRenderPassBeginInfo renderPassInfo = {};
 			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 			renderPassInfo.renderPass = GetDefaultRenderPass();
-			renderPassInfo.framebuffer = GetSwapChainFrameBuffers()[i];
+			renderPassInfo.framebuffer = *(GetSwapChainFrameBuffers()+ i);
 			renderPassInfo.renderArea.offset = { 0, 0 };
 			renderPassInfo.renderArea.extent = GetSwapChainExtent();
 

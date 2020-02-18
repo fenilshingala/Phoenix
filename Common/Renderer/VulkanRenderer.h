@@ -107,7 +107,8 @@ public:
 	inline VkFramebuffer* GetSwapChainFrameBuffers() { return swapChainFramebuffers.data(); }
 
 	void PH_CreateDescriptorSetLayout(VkDescriptorSetLayoutCreateInfo layoutInfo, VkDescriptorSetLayout* descriptorSetLayout);
-	
+	void PH_DeleteDescriptorSetLayout(VkDescriptorSetLayout* descriptorSetLayout);
+
 	void PH_CreatePipelineLayout(VkPipelineLayoutCreateInfo pipelineLayoutInfo, VkPipelineLayout* pipelineLayout);
 	void PH_DeletePipelineLayout(VkPipelineLayout& pipelineLayout);
 
@@ -118,7 +119,7 @@ public:
 	void PH_UpdateDeDescriptorSets(tinystl::vector<VkWriteDescriptorSet> descriptorWrites);
 	
 	void PH_CreateCommandBuffers();
-	inline tinystl::vector<VkCommandBuffer> GetCommandBuffers() { return commandBuffers; }
+	inline tinystl::vector<VkCommandBuffer>& GetCommandBuffers() { return commandBuffers; }
 
 	uint32_t PH_PrepareNextFrame();
 	void PH_SubmitFrame();

@@ -194,7 +194,7 @@ void VulkanRenderer::initVulkan()
 	createSwapChain();
 	createImageViews();				// swapchain image views
 	createRenderPass();
-	createDescriptorSetLayout();
+	//createDescriptorSetLayout();
 	//createGraphicsPipeline();
 	createCommandPool();
 	
@@ -215,8 +215,6 @@ void VulkanRenderer::initVulkan()
 
 	createDescriptorPool();
 	//createDescriptorSets();
-
-	PH_CreateCommandBuffers();
 	//createCommandBuffers();
 
 	createSyncObjects();
@@ -296,7 +294,8 @@ void VulkanRenderer::cleanupSwapChain()
 {
 	UnLoad();
 
-	for (size_t i = 0; i < swapChainFramebuffers.size(); i++) {
+	for (size_t i = 0; i < swapChainFramebuffers.size(); i++)
+	{
 		vkDestroyFramebuffer(device, swapChainFramebuffers[i], nullptr);
 	}
 
@@ -1027,6 +1026,11 @@ void VulkanRenderer::PH_CreateDescriptorSetLayout(VkDescriptorSetLayoutCreateInf
 	}
 }
 
+void VulkanRenderer::PH_DeleteDescriptorSetLayout(VkDescriptorSetLayout* descriptorSetLayout)
+{
+	vkDestroyDescriptorSetLayout(device, *descriptorSetLayout, nullptr);
+}
+
 //void VulkanRenderer::createDescriptorSetLayout()
 //{
 //	tinystl::vector<VkDescriptorSetLayoutBinding> bindings;
@@ -1615,7 +1619,7 @@ void VulkanRenderer::CreateBuffer(PH_BufferCreateInfo info, PH_Buffer& ph_buffer
 		vkDestroyBuffer(device, stagingBuffer, nullptr);
 		vkFreeMemory(device, stagingBufferMemory, nullptr);
 	}
-	else if (info.memoryPropertyFlags | (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
+	else if (info.memoryPropertyFlags | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
 	{
 		createBuffer(ph_buffer.bufferSize, info.bufferUsageFlags, info.memoryPropertyFlags, ph_buffer.buffer, ph_buffer.bufferMemory);
 	}
@@ -1690,7 +1694,7 @@ void VulkanRenderer::updateBuffer(PH_BufferUpdateInfo info)
 {
 	void* data;
 	vkMapMemory(device, info.buffer.bufferMemory, 0, info.dataSize, 0, &data);
-	memcpy(data, &info.data, info.dataSize);
+		memcpy(data, info.data, info.dataSize);
 	vkUnmapMemory(device, info.buffer.bufferMemory);
 }
 
