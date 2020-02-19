@@ -1,6 +1,8 @@
 #include "VulkanRenderer.h"
+
 #include <chrono>
 #include <vector>
+#include <iostream>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -33,9 +35,9 @@ struct Vertex
 		return bindingDescription;
 	}
 
-	static tinystl::vector<VkVertexInputAttributeDescription> getAttributeDescriptions()
+	static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions()
 	{
-		tinystl::vector<VkVertexInputAttributeDescription> attributeDescriptions(3);
+		std::vector<VkVertexInputAttributeDescription> attributeDescriptions(3);
 
 		attributeDescriptions[0].binding = 0;
 		attributeDescriptions[0].location = 0;
@@ -56,8 +58,8 @@ struct Vertex
 	}
 
 };
-tinystl::vector<Vertex> vertices;
-tinystl::vector<uint16_t> indices;
+std::vector<Vertex> vertices;
+std::vector<uint16_t> indices;
 
 PH_Buffer vertexBuffer;
 PH_Buffer indexBuffer;
@@ -69,7 +71,7 @@ VkShaderModule fragmentShaderModule;
 VkDescriptorSetLayout descriptorSetLayout;
 VkPipelineLayout pipelineLayout;
 VkPipeline graphicsPipeline;
-tinystl::vector<VkDescriptorSet> descriptorSets;
+std::vector<VkDescriptorSet> descriptorSets;
 
 
 class Application : public VulkanRenderer
@@ -103,7 +105,7 @@ public:
 			vertexBufferInfo.bufferSize = (VkDeviceSize)(sizeof(vertices[0]) * vertices.size());
 			vertexBufferInfo.bufferUsageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 			vertexBufferInfo.memoryPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-			CreateBuffer(vertexBufferInfo, vertexBuffer);
+			PH_CreateBuffer(vertexBufferInfo, vertexBuffer);
 		}
 
 		// Index Buffer
@@ -113,44 +115,44 @@ public:
 			indexBufferInfo.bufferSize = (VkDeviceSize)(sizeof(indices[0]) * indices.size());
 			indexBufferInfo.bufferUsageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 			indexBufferInfo.memoryPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-			CreateBuffer(indexBufferInfo, indexBuffer);
+			PH_CreateBuffer(indexBufferInfo, indexBuffer);
 		}
 
 		// Texture Image
 		{
 			texture.path = "../../Phoenix/App/Test/textures/texture.jpg";
-			CreateTexture(texture);
+			PH_CreateTexture(texture);
 		}
 
 		// sampler
 		{
-			sampler = createTextureSampler();
+			sampler = PH_CreateSampler();
 		}
 
 		//shader module
 		{
-			vertexShaderModule = createShaderModule("../../Phoenix/App/Test/Shaders/SpirV/vert.spv");
-			fragmentShaderModule = createShaderModule("../../Phoenix/App/Test/Shaders/SpirV/frag.spv");
+			vertexShaderModule = PH_CreateShaderModule("../../Phoenix/App/Test/Shaders/SpirV/vert.spv");
+			fragmentShaderModule = PH_CreateShaderModule("../../Phoenix/App/Test/Shaders/SpirV/frag.spv");
 		}
 	}
 
 	void Exit()
 	{
 		// shader modules
-		destroyShaderModule(vertexShaderModule);
-		destroyShaderModule(fragmentShaderModule);
+		PH_DestroyShaderModule(vertexShaderModule);
+		PH_DestroyShaderModule(fragmentShaderModule);
 
 		// sampler
-		DeleteSampler(sampler);
+		PH_DeleteSampler(sampler);
 
 		// Texture Image
-		DeleteTexture(texture);
+		PH_DeleteTexture(texture);
 
 		// Index Buffer
-		DeleteBuffer(indexBuffer);
+		PH_DeleteBuffer(indexBuffer);
 
 		// Vertex Buffer
-		DeleteBuffer(vertexBuffer);
+		PH_DeleteBuffer(vertexBuffer);
 	}
 
 	void Load() override
@@ -164,27 +166,27 @@ public:
 			uniformBufferInfo.memoryPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 			for (uint32_t i = 0; i < noOfImages; ++i)
 			{
-				CreateBuffer(uniformBufferInfo, uniformBuffers[i]);
+				PH_CreateBuffer(uniformBufferInfo, uniformBuffers[i]);
 			}
 		}
 
 		createDescriptorSetLayout();
 		createGraphicsPipeline();
 		createDescriptorSets();
-		createCommandBuffers();
+		RecordCommandBuffers();
 	}
 
 	void UnLoad() override
 	{
 		// cleanup
-		PH_DeleteDescriptorSetLayout(&descriptorSetLayout);
+		PH_DeleteDescriptorSetLayout(descriptorSetLayout);
 		PH_DeletePipelineLayout(pipelineLayout);
 		PH_DeleteGraphicsPipeline(graphicsPipeline);
 
 		const int maxImages = GetNoOfSwapChains();
 		for (int i = 0; i < maxImages; ++i)
 		{
-			DeleteBuffer(uniformBuffers[i]);
+			PH_DeleteBuffer(uniformBuffers[i]);
 		}
 	}
 
@@ -192,7 +194,7 @@ public:
 
 	void createDescriptorSetLayout() override
 	{
-		tinystl::vector<VkDescriptorSetLayoutBinding> bindings;
+		std::vector<VkDescriptorSetLayoutBinding> bindings;
 		
 		VkDescriptorSetLayoutBinding uboLayoutBinding = {};
 		uboLayoutBinding.binding = 0;
@@ -215,7 +217,7 @@ public:
 		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
 		layoutInfo.pBindings = bindings.data();
 		
-		PH_CreateDescriptorSetLayout(layoutInfo, &descriptorSetLayout);
+		PH_CreateDescriptorSetLayout(layoutInfo, descriptorSetLayout);
 	}
 
 	void createGraphicsPipeline() override
@@ -240,7 +242,7 @@ public:
 		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 	
 		VkVertexInputBindingDescription bindingDescription						 = Vertex::getBindingDescription();
-		tinystl::vector<VkVertexInputAttributeDescription> attributeDescriptions = Vertex::getAttributeDescriptions();
+		std::vector<VkVertexInputAttributeDescription> attributeDescriptions = Vertex::getAttributeDescriptions();
 	
 		vertexInputInfo.vertexBindingDescriptionCount = 1;
 		vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
@@ -321,7 +323,7 @@ public:
 		pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
 		pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 	
-		PH_CreatePipelineLayout(pipelineLayoutInfo, &pipelineLayout);
+		PH_CreatePipelineLayout(pipelineLayoutInfo, pipelineLayout);
 
 		VkGraphicsPipelineCreateInfo pipelineInfo = {};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -336,29 +338,26 @@ public:
 		pipelineInfo.pColorBlendState = &colorBlending;
 		pipelineInfo.pDynamicState = nullptr; // Optional
 
-		//if (depthEnabled)
-		//{
-			VkPipelineDepthStencilStateCreateInfo depthStencil = {};
-			depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-			depthStencil.depthTestEnable = VK_TRUE;
-			depthStencil.depthWriteEnable = VK_TRUE;
-			depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-			depthStencil.depthBoundsTestEnable = VK_FALSE;
-			depthStencil.minDepthBounds = 0.0f; // Optional
-			depthStencil.maxDepthBounds = 1.0f; // Optional
-			depthStencil.stencilTestEnable = VK_FALSE;
-			depthStencil.front = {}; // Optional
-			depthStencil.back = {}; // Optional
-			pipelineInfo.pDepthStencilState = &depthStencil;
-		//}
-
+		VkPipelineDepthStencilStateCreateInfo depthStencil = {};
+		depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+		depthStencil.depthTestEnable = VK_TRUE;
+		depthStencil.depthWriteEnable = VK_TRUE;
+		depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+		depthStencil.depthBoundsTestEnable = VK_FALSE;
+		depthStencil.minDepthBounds = 0.0f; // Optional
+		depthStencil.maxDepthBounds = 1.0f; // Optional
+		depthStencil.stencilTestEnable = VK_FALSE;
+		depthStencil.front = {}; // Optional
+		depthStencil.back = {}; // Optional
+		pipelineInfo.pDepthStencilState = &depthStencil;
+		
 		pipelineInfo.layout = pipelineLayout;
 		pipelineInfo.renderPass = GetDefaultRenderPass();
 		pipelineInfo.subpass = 0;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
 		pipelineInfo.basePipelineIndex = -1; // Optional
 
-		PH_CreateGraphicsPipeline(pipelineInfo, &graphicsPipeline);
+		PH_CreateGraphicsPipeline(pipelineInfo, graphicsPipeline);
 	}
 
 	void createDescriptorSets() override
@@ -379,7 +378,7 @@ public:
 			imageInfo.imageView = texture.imageView;
 			imageInfo.sampler = sampler;
 		
-			tinystl::vector<VkWriteDescriptorSet> descriptorWrites(2);
+			std::vector<VkWriteDescriptorSet> descriptorWrites(2);
 			descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrites[0].dstSet = descriptorSets[i];
 			descriptorWrites[0].dstBinding = 0;
@@ -404,7 +403,7 @@ public:
 
 	void UpdateUniformBuffer(uint32_t imageIndex)
 	{
-		VkExtent2D swapChainExtent = GetSwapChainExtent();
+		const VkExtent2D swapChainExtent = GetSwapChainExtent();
 
 		static std::chrono::time_point<std::chrono::steady_clock>	startTime   = std::chrono::high_resolution_clock::now();
 		std::chrono::time_point<std::chrono::steady_clock>			currentTime = std::chrono::high_resolution_clock::now();
@@ -421,14 +420,12 @@ public:
 		bufferUpdate.data		= &ubo;
 		bufferUpdate.dataSize	= sizeof(UniformBufferObject);
 
-		updateBuffer(bufferUpdate);
+		PH_UpdateBuffer(bufferUpdate);
 	}
 
-	void createCommandBuffers() override
+	void RecordCommandBuffers() override
 	{
-		PH_CreateCommandBuffers();
-
-		tinystl::vector<VkCommandBuffer> commandBuffers = GetCommandBuffers();
+		std::vector<VkCommandBuffer> commandBuffers = GetCommandBuffers();
 
 		for (uint32_t i = 0; i < commandBuffers.size(); i++)
 		{
@@ -483,7 +480,7 @@ public:
 		}
 	}
 
-	void drawFrame() override
+	void DrawFrame() override
 	{
 		uint32_t imageIndex = PH_PrepareNextFrame();
 
@@ -505,19 +502,16 @@ int main()
 	try {
 		Application* app = new Application();
 		app->initWindow();
-		//app->enableDepth();
 		app->initVulkan();
 
 		while (!app->windowShouldClose())
 		{
 			app->pollEvents();
-			app->updateInputs();
-
 			if (app->isKeyPressed(PH_KEY_ESCAPE))
 			{
 				break;
 			}
-			app->drawFrame();
+			app->DrawFrame();
 		}
 
 		app->waitDeviceIdle();
