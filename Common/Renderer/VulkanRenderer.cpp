@@ -170,7 +170,9 @@ bool VulkanRenderer::isKeyTriggered(const uint32_t _key)
 ////////////////////// VULKAN //////////////////////
 
 const char* deviceExtensions[] = {
-	VK_KHR_SWAPCHAIN_EXTENSION_NAME
+	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+	VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
+	VK_NV_RAY_TRACING_EXTENSION_NAME
 };
 
 
@@ -362,9 +364,11 @@ void VulkanRenderer::createInstance()
 	requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
 
+	// RAY TRACING
+	requiredExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+
 	createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size());
 	createInfo.ppEnabledExtensionNames = requiredExtensions.data();
-
 
 	// check for available extensions
 	uint32_t availableExtensionCount = 0;
@@ -821,7 +825,6 @@ VkShaderModule VulkanRenderer::PH_CreateShaderModule(const char* path)
 		throw std::runtime_error("failed to create shader module!");
 	}
 
-	//shaderModules.emplace_back(shaderModule);
 	return shaderModule;
 }
 
@@ -905,7 +908,7 @@ void VulkanRenderer::createRenderPass()
 		VkAttachmentReference depthAttachmentRef = {};
 		depthAttachmentRef.attachment = 1;
 		depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
+	
 		subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
 		attachments.emplace_back(depthAttachment);
@@ -918,16 +921,25 @@ void VulkanRenderer::createRenderPass()
 	renderPassInfo.subpassCount = 1;
 	renderPassInfo.pSubpasses = &subpass;
 
-	VkSubpassDependency dependency = {};
-	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-	dependency.dstSubpass = 0;
-	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	dependency.srcAccessMask = 0;
-	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	VkSubpassDependency dependency[2] = {};
+	dependency[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+	dependency[0].dstSubpass = 0;
+	dependency[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+	dependency[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+	dependency[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	dependency[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
-	renderPassInfo.dependencyCount = 1;
-	renderPassInfo.pDependencies = &dependency;
+	dependency[1].srcSubpass = 0;
+	dependency[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+	dependency[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+	dependency[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	dependency[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+	dependency[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+	renderPassInfo.dependencyCount = (uint32_t)(sizeof(dependency) / sizeof(dependency[0]));
+	renderPassInfo.pDependencies = dependency;
 
 	if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS)
 	{
@@ -1260,7 +1272,7 @@ void VulkanRenderer::PH_CreateBuffer(PH_BufferCreateInfo info, PH_Buffer& ph_buf
 {
 	ph_buffer.bufferSize = info.bufferSize;
 
-	if ((info.memoryPropertyFlags | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) && info.data != nullptr)
+	if ((info.memoryPropertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) && info.data != nullptr)
 	{
 		VkBuffer stagingBuffer;
 		VkDeviceMemory stagingBufferMemory;
@@ -1278,13 +1290,17 @@ void VulkanRenderer::PH_CreateBuffer(PH_BufferCreateInfo info, PH_Buffer& ph_buf
 		vkDestroyBuffer(device, stagingBuffer, nullptr);
 		vkFreeMemory(device, stagingBufferMemory, nullptr);
 	}
-	else if (info.memoryPropertyFlags | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+	else// if (info.memoryPropertyFlags | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
 	{
 		createBuffer(ph_buffer.bufferSize, info.bufferUsageFlags, info.memoryPropertyFlags, ph_buffer.buffer, ph_buffer.bufferMemory);
-	}
-	else
-	{
-		assert(0);
+
+		if (info.data != nullptr)
+		{
+			void* data;
+			vkMapMemory(device, ph_buffer.bufferMemory, 0, ph_buffer.bufferSize, 0, &data);
+			memcpy(data, info.data, (size_t)ph_buffer.bufferSize);
+			vkUnmapMemory(device, ph_buffer.bufferMemory);
+		}
 	}
 }
 
@@ -1459,39 +1475,56 @@ void VulkanRenderer::createDepthResources()
 	transitionImageLayout(depthImage, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
-void VulkanRenderer::PH_CreateTexture(PH_Image& ph_image)
+void VulkanRenderer::PH_CreateTexture(PH_ImageCreateInfo& info, PH_Image& ph_image)
 {
-	stbi_uc* pixels = stbi_load(ph_image.path.c_str(), &ph_image.width, &ph_image.height, &ph_image.nChannels, STBI_rgb_alpha);
-	VkDeviceSize imageSize = ph_image.width * ph_image.height * 4;
-
-	if (!pixels)
+	if (info.path.empty())
 	{
-		throw std::runtime_error("failed to load texture image!");
+		createImage(info.width, info.height, info.format, info.tiling, info.usageFlags, info.memoryProperty, ph_image.image, ph_image.imageMemory);
+		ph_image.imageView = createImageView(ph_image.image, info.format, info.aspectBits);
 	}
+	else
+	{
+		stbi_uc* pixels = stbi_load(info.path.c_str(), &info.width, &info.height, &info.nChannels, STBI_rgb_alpha);
+		VkDeviceSize imageSize = (uint64_t)(info.width * info.height) * (uint64_t)4;
 
-	VkBuffer stagingBuffer;
-	VkDeviceMemory stagingBufferMemory;
+		if (!pixels)
+		{
+			throw std::runtime_error("failed to load texture image!");
+		}
 
-	createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+		VkBuffer stagingBuffer;
+		VkDeviceMemory stagingBufferMemory;
 
-	void* data;
-	vkMapMemory(device, stagingBufferMemory, 0, imageSize, 0, &data);
-	memcpy(data, pixels, static_cast<size_t>(imageSize));
-	vkUnmapMemory(device, stagingBufferMemory);
+		createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
-	stbi_image_free(pixels);
+		void* data;
+		vkMapMemory(device, stagingBufferMemory, 0, imageSize, 0, &data);
+		memcpy(data, pixels, static_cast<size_t>(imageSize));
+		vkUnmapMemory(device, stagingBufferMemory);
 
-	createImage(ph_image.width, ph_image.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, ph_image.image, ph_image.imageMemory);
+		stbi_image_free(pixels);
 
-	transitionImageLayout(ph_image.image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-	copyBufferToImage(stagingBuffer, ph_image.image, static_cast<uint32_t>(ph_image.width), static_cast<uint32_t>(ph_image.height));
-	transitionImageLayout(ph_image.image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		if (info.format == VK_FORMAT_UNDEFINED)
+		{
+			if(info.nChannels == 4)
+				info.format = VK_FORMAT_R8G8B8A8_UNORM;
+			else if(info.nChannels == 3)
+				info.format = VK_FORMAT_R8G8B8_UNORM;
+			else
+				info.format = VK_FORMAT_R8G8B8A8_UNORM;
+		}
 
-	vkDestroyBuffer(device, stagingBuffer, nullptr);
-	vkFreeMemory(device, stagingBufferMemory, nullptr);
+		createImage(info.width, info.height, info.format, info.tiling, info.usageFlags, info.memoryProperty, ph_image.image, ph_image.imageMemory);
 
-	ph_image.imageView = createImageView(ph_image.image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
+		transitionImageLayout(ph_image.image, info.format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		copyBufferToImage(stagingBuffer, ph_image.image, static_cast<uint32_t>(info.width), static_cast<uint32_t>(info.height));
+		transitionImageLayout(ph_image.image, info.format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+		vkDestroyBuffer(device, stagingBuffer, nullptr);
+		vkFreeMemory(device, stagingBufferMemory, nullptr);
+
+		ph_image.imageView = createImageView(ph_image.image, info.format, info.aspectBits);
+	}
 }
 
 void VulkanRenderer::PH_DeleteTexture(PH_Image& ph_image)

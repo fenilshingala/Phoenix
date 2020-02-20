@@ -8,15 +8,24 @@
 
 struct SDL_window;
 
+struct PH_ImageCreateInfo
+{
+	std::string				path;
+	int						width;
+	int						height;
+	int						nChannels;
+	VkFormat				format = VK_FORMAT_UNDEFINED;
+	VkImageUsageFlags		usageFlags;
+	VkImageTiling			tiling;
+	VkMemoryPropertyFlags	memoryProperty;
+	VkImageAspectFlagBits	aspectBits;
+};
+
 struct PH_Image
 {
-	VkImage			image;
-	VkDeviceMemory	imageMemory;
-	VkImageView		imageView;
-	std::string		path;
-	int				width;
-	int				height;
-	int				nChannels;
+	VkImage				image;
+	VkDeviceMemory		imageMemory;
+	VkImageView			imageView;
 };
 
 struct PH_BufferCreateInfo
@@ -40,6 +49,8 @@ struct PH_BufferUpdateInfo
 	void*			data = nullptr;
 	VkDeviceSize	dataSize;
 };
+
+uint32_t findMemoryType(VkPhysicalDevice& _physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
 class VulkanRenderer
 {
@@ -75,7 +86,7 @@ public:
 	void waitDeviceIdle();
 	
 	// TEXTURES
-	void PH_CreateTexture(PH_Image& ph_image);
+	void PH_CreateTexture(PH_ImageCreateInfo& info, PH_Image& ph_image);
 	void PH_DeleteTexture(PH_Image& ph_image);
 
 	// BUFFERS
@@ -113,6 +124,7 @@ public:
 	// GETTERS
 	inline const int GetNoOfSwapChains();
 	inline const VkExtent2D GetSwapChainExtent();
+	inline const VkFormat GetSwapChainImageFormat();
 	inline VkRenderPass GetDefaultRenderPass();
 	inline VkFramebuffer* GetSwapChainFrameBuffers();
 	inline std::vector<VkCommandBuffer>& GetCommandBuffers();
@@ -122,12 +134,21 @@ public:
 	virtual void createDescriptorSetLayout() = 0;
 	virtual void createGraphicsPipeline() = 0;
 	virtual void RecordCommandBuffers();			// can be overriden by app
+	virtual void createDescriptorPool();
 	virtual void createDescriptorSets() = 0;
 	virtual void Init() = 0;
 	virtual void Exit() = 0;
 	virtual void Load() = 0;
 	virtual void UnLoad() = 0;
 	virtual void DrawFrame() = 0;
+
+	VkPhysicalDevice physicalDevice;
+	VkDevice device; // logical
+	VkDescriptorPool descriptorPool;
+	std::vector<VkImage> swapChainImages;
+	VkCommandBuffer beginSingleTimeCommands();
+	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
+	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 
 private:
 	// WINDOW
@@ -154,12 +175,8 @@ private:
 	void createSwapChain();
 	void createImageViews();
 	void createCommandPool();
-	void createDescriptorPool();
 	void createSyncObjects();
 	void createCommandBuffers();
-
-	VkCommandBuffer beginSingleTimeCommands();
-	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 
 	void createDepthResources();
 	void createFramebuffers();
@@ -171,7 +188,6 @@ private:
 	void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
 		VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
 	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
-	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 
 	void destroyInstance();
 
@@ -180,16 +196,12 @@ private:
 
 	VkInstance instance;
 
-	VkPhysicalDevice physicalDevice;
-	VkDevice device; // logical
-	
 	VkQueue graphicsQueue;
 	VkQueue presentQueue;
 	
 	VkSurfaceKHR surface;
 	
 	VkSwapchainKHR swapChain;
-	std::vector<VkImage> swapChainImages;
 	std::vector<VkImageView> swapChainImageViews;
 	VkFormat swapChainImageFormat;
 	VkExtent2D swapChainExtent;
@@ -202,8 +214,6 @@ private:
 	VkImage depthImage;
 	VkDeviceMemory depthImageMemory;
 	VkImageView depthImageView;
-
-	VkDescriptorPool descriptorPool;
 
 	std::vector<VkSemaphore> imageAvailableSemaphores;
 	std::vector<VkSemaphore> renderFinishedSemaphores;
@@ -223,6 +233,11 @@ private:
 inline const VkExtent2D VulkanRenderer::GetSwapChainExtent()
 {
 	return swapChainExtent;
+}
+
+inline const VkFormat VulkanRenderer::GetSwapChainImageFormat()
+{
+	return swapChainImageFormat;
 }
 
 inline VkRenderPass VulkanRenderer::GetDefaultRenderPass()

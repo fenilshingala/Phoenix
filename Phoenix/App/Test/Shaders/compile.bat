@@ -1,3 +1,4 @@
-%VULKAN_SDK%\Bin32\glslangValidator.exe -V %1basic.vert -o %1SpirV/vert.spv
-%VULKAN_SDK%\Bin32\glslangValidator.exe -V %1basic.frag -o %1SpirV/frag.spv
+%VULKAN_SDK%\Bin32\glslangValidator.exe -V %1raygen.rgen -o %1SpirV/raygen.rgen.spv
+%VULKAN_SDK%\Bin32\glslangValidator.exe -V %1miss.rmiss -o %1SpirV/miss.rmiss.spv
+%VULKAN_SDK%\Bin32\glslangValidator.exe -V %1closesthit.rchit -o %1SpirV/closesthit.rchit.spv
 pause
