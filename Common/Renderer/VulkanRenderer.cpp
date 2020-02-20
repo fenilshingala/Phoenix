@@ -186,7 +186,7 @@ void VulkanRenderer::initVulkan()
 	createCommandPool();
 	createDepthResources();
 	createFramebuffers();
-	createDescriptorPool();
+		createDescriptorPool();
 	createSyncObjects();
 	createCommandBuffers();
 
@@ -207,7 +207,6 @@ void VulkanRenderer::cleanupVulkan()
 		vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
 		vkDestroyFence(device, inFlightFences[i], nullptr);
 	}
-	vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 	for (VkFramebuffer framebuffer : swapChainFramebuffers)
 	{
 		vkDestroyFramebuffer(device, framebuffer, nullptr);
@@ -257,7 +256,6 @@ void VulkanRenderer::cleanupSwapChain()
 	UnLoad();	// App override
 
 	vkFreeCommandBuffers(device, commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
-	vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 	for (size_t i = 0; i < swapChainFramebuffers.size(); i++)
 	{
 		vkDestroyFramebuffer(device, swapChainFramebuffers[i], nullptr);
@@ -1028,12 +1026,6 @@ void VulkanRenderer::createCommandBuffers()
 	}
 }
 
-void VulkanRenderer::RecordCommandBuffers()
-{
-	// TO DO
-	// default commands
-}
-
 void VulkanRenderer::createSyncObjects()
 {
 	imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
@@ -1536,34 +1528,27 @@ void VulkanRenderer::PH_DeleteSampler(VkSampler& sampler)
 	vkDestroySampler(device, sampler, nullptr);
 }
 
-void VulkanRenderer::createDescriptorPool()
+void VulkanRenderer::PH_CreateDescriptorPool(VkDescriptorPoolCreateInfo descriptorPoolInfo, VkDescriptorPool& descriptorPool)
 {
-	std::vector<VkDescriptorPoolSize> poolSizes(2);
-	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[0].descriptorCount = static_cast<uint32_t>(swapChainImages.size());
-	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[1].descriptorCount = static_cast<uint32_t>(swapChainImages.size());
-
-	VkDescriptorPoolCreateInfo poolInfo = {};
-	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets = static_cast<uint32_t>(swapChainImages.size());
-
-	if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
+	if (vkCreateDescriptorPool(device, &descriptorPoolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to create descriptor pool!");
 	}
 }
 
-void VulkanRenderer::PH_CreateDescriptorSets(VkDescriptorSetLayout descriptorSetLayout, std::vector<VkDescriptorSet>& descriptorSets)
+void VulkanRenderer::PH_DeleteDescriptorPool(VkDescriptorPool& descriptorPool)
 {
-	std::vector<VkDescriptorSetLayout> layouts(swapChainImages.size(), descriptorSetLayout);
+	vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+}
+
+void VulkanRenderer::PH_CreateDescriptorSets(VkDescriptorSetLayout descriptorSetLayout, uint32_t descriptorSetCount, VkDescriptorPool descriptorPool, std::vector<VkDescriptorSet>& descriptorSets)
+{
+	std::vector<VkDescriptorSetLayout> layouts(descriptorSetCount, descriptorSetLayout);
 
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo.descriptorPool = descriptorPool;
-	allocInfo.descriptorSetCount = static_cast<uint32_t>(swapChainImages.size());
+	allocInfo.descriptorSetCount = descriptorSetCount;
 	allocInfo.pSetLayouts = layouts.data();
 
 	descriptorSets.resize(swapChainImages.size());

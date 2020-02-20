@@ -68,6 +68,7 @@ PH_Image texture;
 VkSampler sampler;
 VkShaderModule vertexShaderModule;
 VkShaderModule fragmentShaderModule;
+VkDescriptorPool descriptorPool;
 VkDescriptorSetLayout descriptorSetLayout;
 VkPipelineLayout pipelineLayout;
 VkPipeline graphicsPipeline;
@@ -170,6 +171,7 @@ public:
 			}
 		}
 
+		createDescriptorPool();
 		createDescriptorSetLayout();
 		createGraphicsPipeline();
 		createDescriptorSets();
@@ -179,9 +181,10 @@ public:
 	void UnLoad() override
 	{
 		// cleanup
-		PH_DeleteDescriptorSetLayout(descriptorSetLayout);
-		PH_DeletePipelineLayout(pipelineLayout);
 		PH_DeleteGraphicsPipeline(graphicsPipeline);
+		PH_DeletePipelineLayout(pipelineLayout);
+		PH_DeleteDescriptorSetLayout(descriptorSetLayout);
+		PH_DeleteDescriptorPool(descriptorPool);
 
 		const int maxImages = GetNoOfSwapChains();
 		for (int i = 0; i < maxImages; ++i)
@@ -360,11 +363,30 @@ public:
 		PH_CreateGraphicsPipeline(pipelineInfo, graphicsPipeline);
 	}
 
+	void createDescriptorPool()
+	{
+		uint32_t noOfSCImages = GetNoOfSwapChains();
+
+		std::vector<VkDescriptorPoolSize> poolSizes(2);
+		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSizes[0].descriptorCount = static_cast<uint32_t>(noOfSCImages);
+		poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		poolSizes[1].descriptorCount = static_cast<uint32_t>(noOfSCImages);
+
+		VkDescriptorPoolCreateInfo poolInfo = {};
+		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+		poolInfo.pPoolSizes = poolSizes.data();
+		poolInfo.maxSets = static_cast<uint32_t>(noOfSCImages);
+
+		PH_CreateDescriptorPool(poolInfo, descriptorPool);
+	}
+
 	void createDescriptorSets() override
 	{
 		const int max_frames =  GetNoOfSwapChains();
 
-		PH_CreateDescriptorSets(descriptorSetLayout, descriptorSets);
+		PH_CreateDescriptorSets(descriptorSetLayout, max_frames, descriptorPool, descriptorSets);
 		
 		for (size_t i = 0; i < max_frames; ++i)
 		{

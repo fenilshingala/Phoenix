@@ -50,7 +50,7 @@ public:
 	swapChain(VK_NULL_HANDLE), swapChainImages(), swapChainImageViews(), swapChainImageFormat(VK_FORMAT_UNDEFINED), swapChainExtent({800, 600}),
 	renderPass(VK_NULL_HANDLE), swapChainFramebuffers(), commandPool(VK_NULL_HANDLE), commandBuffers(),
 	depthImage(VK_NULL_HANDLE), depthImageMemory(VK_NULL_HANDLE), depthImageView(VK_NULL_HANDLE),
-	descriptorPool(VK_NULL_HANDLE), imageAvailableSemaphores(), renderFinishedSemaphores(), validationLayers(), debugMessenger(VK_NULL_HANDLE),
+	imageAvailableSemaphores(), renderFinishedSemaphores(), validationLayers(), debugMessenger(VK_NULL_HANDLE),
 	MAX_FRAMES_IN_FLIGHT(2), currentFrame(0), inFlightFences(VK_NULL_HANDLE), imageIndex(0)
 	{
 		validationLayers.emplace_back("VK_LAYER_LUNARG_standard_validation");
@@ -103,8 +103,10 @@ public:
 	void PH_CreateGraphicsPipeline(VkGraphicsPipelineCreateInfo pipelineInfo, VkPipeline& pipelineLayout);
 	void PH_DeleteGraphicsPipeline(VkPipeline& graphicsPipeline);
 	
-	// Descriptor Sets
-	void PH_CreateDescriptorSets(VkDescriptorSetLayout descriptorSetLayout, std::vector<VkDescriptorSet>& descriptorSets);
+	// Descriptors
+	void PH_CreateDescriptorPool(VkDescriptorPoolCreateInfo descriptorSetLayout, VkDescriptorPool& descriptorPool);
+	void PH_DeleteDescriptorPool(VkDescriptorPool& descriptorPool);
+	void PH_CreateDescriptorSets(VkDescriptorSetLayout descriptorSetLayout, uint32_t descriptorSetCount, VkDescriptorPool descriptorPool, std::vector<VkDescriptorSet>& descriptorSets);
 	void PH_UpdateDeDescriptorSets(std::vector<VkWriteDescriptorSet> descriptorWrites);
 	
 	const uint32_t PH_PrepareNextFrame();
@@ -121,12 +123,13 @@ public:
 	virtual void createRenderPass();				// can be overriden by app
 	virtual void createDescriptorSetLayout() = 0;
 	virtual void createGraphicsPipeline() = 0;
-	virtual void RecordCommandBuffers();			// can be overriden by app
+	virtual void createDescriptorPool() = 0;
 	virtual void createDescriptorSets() = 0;
 	virtual void Init() = 0;
 	virtual void Exit() = 0;
 	virtual void Load() = 0;
 	virtual void UnLoad() = 0;
+	virtual void RecordCommandBuffers() = 0;
 	virtual void DrawFrame() = 0;
 
 private:
@@ -154,7 +157,6 @@ private:
 	void createSwapChain();
 	void createImageViews();
 	void createCommandPool();
-	void createDescriptorPool();
 	void createSyncObjects();
 	void createCommandBuffers();
 
@@ -203,7 +205,6 @@ private:
 	VkDeviceMemory depthImageMemory;
 	VkImageView depthImageView;
 
-	VkDescriptorPool descriptorPool;
 
 	std::vector<VkSemaphore> imageAvailableSemaphores;
 	std::vector<VkSemaphore> renderFinishedSemaphores;
