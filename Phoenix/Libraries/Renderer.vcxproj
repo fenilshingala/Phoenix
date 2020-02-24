@@ -168,12 +168,16 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Common\Renderer\main.cpp" />
+    <ClCompile Include="..\..\Common\Renderer\RayTracingBasic.cpp" />
     <ClCompile Include="..\..\Common\Renderer\VulkanRenderer.cpp" />
+    <ClCompile Include="..\..\Common\Renderer\Window.cpp" />
+    <ClCompile Include="..\App\Test\VulkanTutorial.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\Common\Renderer\Camera.hpp" />
     <ClInclude Include="..\..\Common\Renderer\keyBindings.h" />
     <ClInclude Include="..\..\Common\Renderer\VulkanRenderer.h" />
+    <ClInclude Include="..\..\Common\Renderer\Window.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
