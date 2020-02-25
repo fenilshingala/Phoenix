@@ -7,6 +7,11 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <assimp/Importer.hpp> 
+#include <assimp/scene.h>     
+#include <assimp/postprocess.h>
+#include <assimp/cimport.h>
+
 #include <vector>
 #include <string>
 
@@ -69,6 +74,80 @@ struct PH_BufferUpdateInfo
 };
 
 
+typedef enum Vertex_Component {
+	VERTEX_COMPONENT_POSITION = 0x0,
+	VERTEX_COMPONENT_NORMAL = 0x1,
+	VERTEX_COMPONENT_COLOR = 0x2,
+	VERTEX_COMPONENT_UV = 0x3,
+	VERTEX_COMPONENT_TANGENT = 0x4,
+	VERTEX_COMPONENT_BITANGENT = 0x5,
+	VERTEX_COMPONENT_DUMMY_FLOAT = 0x6,
+	VERTEX_COMPONENT_DUMMY_VEC4 = 0x7
+} Vertex_Component;
+
+struct VertexLayout {
+public:
+	/** @brief Components used to generate vertices from */
+	std::vector<Vertex_Component> components;
+
+	VertexLayout(std::vector<Vertex_Component> components)
+	{
+		this->components = std::move(components);
+	}
+
+	uint32_t stride()
+	{
+		uint32_t res = 0;
+		for (auto& component : components)
+		{
+			switch (component)
+			{
+			case VERTEX_COMPONENT_UV:
+				res += 2 * sizeof(float);
+				break;
+			case VERTEX_COMPONENT_DUMMY_FLOAT:
+				res += sizeof(float);
+				break;
+			case VERTEX_COMPONENT_DUMMY_VEC4:
+				res += 4 * sizeof(float);
+				break;
+			default:
+				// All components except the ones listed above are made up of 3 floats
+				res += 3 * sizeof(float);
+			}
+		}
+		return res;
+	}
+};
+
+
+struct PH_Model
+{
+public:
+	PH_Buffer vertices;
+	PH_Buffer indices;
+	uint32_t indexCount = 0;
+	uint32_t vertexCount = 0;
+
+	struct ModelPart
+	{
+		uint32_t vertexBase;
+		uint32_t vertexCount;
+		uint32_t indexBase;
+		uint32_t indexCount;
+	};
+	std::vector<ModelPart> parts;
+
+	static const int defaultFlags = aiProcess_FlipWindingOrder | aiProcess_Triangulate | aiProcess_PreTransformVertices | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals;
+
+	struct Dimension
+	{
+		glm::vec3 min = glm::vec3(FLT_MAX);
+		glm::vec3 max = glm::vec3(-FLT_MAX);
+		glm::vec3 size;
+	} dim;
+};
+
 class VulkanRenderer
 {
 public:
@@ -98,6 +177,10 @@ public:
 	// SHADER MODULES
 	void PH_CreateShaderModule(const char* path, VkShaderModule* shaderModule);
 	void PH_DestroyShaderModule(VkShaderModule* shaderModule);
+
+	// MODELS
+	void PH_LoadModel(const std::string& filename, VertexLayout layout, PH_Model* ph_model);
+	void PH_DeleteModel(PH_Model* ph_model);
 	
 	// DescriptorSet Layout
 	void PH_CreateDescriptorSetLayout(VkDescriptorSetLayoutCreateInfo layoutInfo, VkDescriptorSetLayout* descriptorSetLayout);
@@ -131,14 +214,14 @@ public:
 	virtual void createRenderPass();				// default render pass, can be overriden by app
 	virtual void createDescriptorSetLayout() = 0;
 	virtual void createPipeline() = 0;
-	virtual void RecordCommandBuffers() = 0;
 	virtual void createDescriptorPool() = 0;
 	virtual void createDescriptorSets() = 0;
+	virtual void RecordCommandBuffers() = 0;
+	virtual void DrawFrame() = 0;
 	virtual void Init() = 0;
 	virtual void Exit() = 0;
 	virtual void Load() = 0;
 	virtual void UnLoad() = 0;
-	virtual void DrawFrame() = 0;
 
 	Window* pWindow;
 	

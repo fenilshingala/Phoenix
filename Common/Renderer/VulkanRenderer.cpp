@@ -684,6 +684,167 @@ void VulkanRenderer::PH_DestroyShaderModule(VkShaderModule* shaderModule)
 	vkDestroyShaderModule(device, *shaderModule, nullptr);
 }
 
+void VulkanRenderer::PH_LoadModel(const std::string& filename, VertexLayout layout, PH_Model *ph_model)
+{
+	Assimp::Importer Importer;
+	const aiScene* pScene;
+
+	pScene = Importer.ReadFile(filename.c_str(), PH_Model::defaultFlags);
+	if (!pScene)
+	{
+		std::string error = Importer.GetErrorString();
+		std::cerr << error;
+	}
+
+	if (pScene)
+	{
+		ph_model->parts.clear();
+		ph_model->parts.resize(pScene->mNumMeshes);
+
+		glm::vec3 scale(0.25f);
+		glm::vec2 uvscale(0.25f);
+		glm::vec3 center(0.0f);
+		std::vector<float> vertexBuffer;
+		std::vector<uint32_t> indexBuffer;
+
+		ph_model->vertexCount = 0;
+		ph_model->indexCount = 0;
+
+		// Load meshes
+		for (unsigned int i = 0; i < pScene->mNumMeshes; i++)
+		{
+			const aiMesh* paiMesh = pScene->mMeshes[i];
+
+			ph_model->parts[i] = {};
+			ph_model->parts[i].vertexBase = ph_model->vertexCount;
+			ph_model->parts[i].indexBase  = ph_model->indexCount;
+
+			ph_model->vertexCount += pScene->mMeshes[i]->mNumVertices;
+
+			aiColor3D pColor(0.f, 0.f, 0.f);
+			pScene->mMaterials[paiMesh->mMaterialIndex]->Get(AI_MATKEY_COLOR_DIFFUSE, pColor);
+
+			const aiVector3D Zero3D(0.0f, 0.0f, 0.0f);
+
+			for (unsigned int j = 0; j < paiMesh->mNumVertices; j++)
+			{
+				const aiVector3D* pPos = &(paiMesh->mVertices[j]);
+				const aiVector3D* pNormal = &(paiMesh->mNormals[j]);
+				const aiVector3D* pTexCoord = (paiMesh->HasTextureCoords(0)) ? &(paiMesh->mTextureCoords[0][j]) : &Zero3D;
+				const aiVector3D* pTangent = (paiMesh->HasTangentsAndBitangents()) ? &(paiMesh->mTangents[j]) : &Zero3D;
+				const aiVector3D* pBiTangent = (paiMesh->HasTangentsAndBitangents()) ? &(paiMesh->mBitangents[j]) : &Zero3D;
+
+				for (auto& component : layout.components)
+				{
+					switch (component) {
+					case VERTEX_COMPONENT_POSITION:
+						vertexBuffer.push_back(pPos->x * scale.x + center.x);
+						vertexBuffer.push_back(-pPos->y * scale.y + center.y);
+						vertexBuffer.push_back(pPos->z * scale.z + center.z);
+						break;
+					case VERTEX_COMPONENT_NORMAL:
+						vertexBuffer.push_back(pNormal->x);
+						vertexBuffer.push_back(-pNormal->y);
+						vertexBuffer.push_back(pNormal->z);
+						break;
+					case VERTEX_COMPONENT_UV:
+						vertexBuffer.push_back(pTexCoord->x * uvscale.s);
+						vertexBuffer.push_back(pTexCoord->y * uvscale.t);
+						break;
+					case VERTEX_COMPONENT_COLOR:
+						vertexBuffer.push_back(pColor.r);
+						vertexBuffer.push_back(pColor.g);
+						vertexBuffer.push_back(pColor.b);
+						break;
+					case VERTEX_COMPONENT_TANGENT:
+						vertexBuffer.push_back(pTangent->x);
+						vertexBuffer.push_back(pTangent->y);
+						vertexBuffer.push_back(pTangent->z);
+						break;
+					case VERTEX_COMPONENT_BITANGENT:
+						vertexBuffer.push_back(pBiTangent->x);
+						vertexBuffer.push_back(pBiTangent->y);
+						vertexBuffer.push_back(pBiTangent->z);
+						break;
+						// Dummy components for padding
+					case VERTEX_COMPONENT_DUMMY_FLOAT:
+						vertexBuffer.push_back(0.0f);
+						break;
+					case VERTEX_COMPONENT_DUMMY_VEC4:
+						vertexBuffer.push_back(0.0f);
+						vertexBuffer.push_back(0.0f);
+						vertexBuffer.push_back(0.0f);
+						vertexBuffer.push_back(0.0f);
+						break;
+					};
+				}
+
+				ph_model->dim.max.x = fmax(pPos->x, ph_model->dim.max.x);
+				ph_model->dim.max.y = fmax(pPos->y, ph_model->dim.max.y);
+				ph_model->dim.max.z = fmax(pPos->z, ph_model->dim.max.z);
+
+				ph_model->dim.min.x = fmin(pPos->x, ph_model->dim.min.x);
+				ph_model->dim.min.y = fmin(pPos->y, ph_model->dim.min.y);
+				ph_model->dim.min.z = fmin(pPos->z, ph_model->dim.min.z);
+			}
+
+			ph_model->dim.size = ph_model->dim.max - ph_model->dim.min;
+
+			ph_model->parts[i].vertexCount = paiMesh->mNumVertices;
+
+			uint32_t indexBase = static_cast<uint32_t>(indexBuffer.size());
+			for (unsigned int j = 0; j < paiMesh->mNumFaces; j++)
+			{
+				const aiFace& Face = paiMesh->mFaces[j];
+				if (Face.mNumIndices != 3)
+					continue;
+				indexBuffer.push_back(indexBase + Face.mIndices[0]);
+				indexBuffer.push_back(indexBase + Face.mIndices[1]);
+				indexBuffer.push_back(indexBase + Face.mIndices[2]);
+				ph_model->parts[i].indexCount += 3;
+				ph_model->indexCount += 3;
+			}
+		}
+
+
+		uint32_t vBufferSize = static_cast<uint32_t>(vertexBuffer.size()) * sizeof(float);
+		uint32_t iBufferSize = static_cast<uint32_t>(indexBuffer.size()) * sizeof(uint32_t);
+
+		// VERTEX BUFFER
+		{
+			PH_BufferCreateInfo vBufferInfo;
+			vBufferInfo.bufferSize = vBufferSize;
+			vBufferInfo.bufferUsageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+			vBufferInfo.memoryPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+			vBufferInfo.data = vertexBuffer.data();
+			PH_CreateBuffer(vBufferInfo, &(ph_model->vertices));
+		}
+
+		// INDEX BUFFER
+		{
+			PH_BufferCreateInfo iBufferInfo;
+			iBufferInfo.bufferSize = iBufferSize;
+			iBufferInfo.bufferUsageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+			iBufferInfo.memoryPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+			iBufferInfo.data = indexBuffer.data();
+			PH_CreateBuffer(iBufferInfo, &(ph_model->indices));
+		}
+	}
+	else
+	{
+		assert(0);
+	}
+};
+
+void VulkanRenderer::PH_DeleteModel(PH_Model* ph_model)
+{
+	PH_DeleteBuffer(&ph_model->vertices);
+
+	if (ph_model->indices.buffer != VK_NULL_HANDLE)
+	{
+		PH_DeleteBuffer(&ph_model->indices);
+	}
+}
 
 VkFormat findSupportedFormat(VkPhysicalDevice& physicalDevice, const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
 {
