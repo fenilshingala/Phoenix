@@ -212,8 +212,12 @@ public:
 
 	void Init()
 	{
-		camera.SetPosition(glm::vec3(0.0f, 0.0f, 3.5f));
-		camera.MovementSpeed /= 4.0f;
+		camera.rotation_speed *= 0.25f;
+		camera.translation_speed *= 0.5f;
+		camera.type = CameraType::FirstPerson;
+		camera.set_perspective(60.0f, (float)swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 512.0f);
+		camera.set_rotation(glm::vec3(0.0f, 0.0f, 0.0f));
+		camera.set_translation(glm::vec3(0.0f, 0.0f, -1.5f));
 
 		PH_LoadModel("../../Phoenix/App/Test/Models/reflection_test.dae", vertexLayout, &model);
 
@@ -815,11 +819,9 @@ public:
 		float timer = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
 		UniformBufferObject ubo = {};
-		//ubo.model = glm::scale(ubo.model, glm::vec3(2.0f));
-		ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1, 0, 0));
-		ubo.view = glm::inverse(camera.GetViewMatrix());
-		ubo.proj = glm::inverse(glm::perspective(glm::radians(45.0f), (float)swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f));
-		ubo.proj[1][1] *= -1;
+		ubo.model = glm::mat4(1.0f);
+		ubo.proj = glm::inverse(camera.matrices.perspective);
+		ubo.view = glm::inverse(camera.matrices.view);
 		ubo.lightPos = glm::vec4(cos(glm::radians(timer * 360.0f)) * 40.0f, -20.0f + sin(glm::radians(timer * 360.0f)) * 20.0f, 25.0f + sin(glm::radians(timer * 360.0f)) * 5.0f, 0.0f);
 
 		PH_BufferUpdateInfo bufferUpdate;
@@ -848,27 +850,32 @@ public:
 		lastX = xpos;
 		lastY = ypos;
 
+		camera.keys.up = false;
+		camera.keys.down = false;
+		camera.keys.left = false;
+		camera.keys.right = false;
+
 		if (pWindow->isRightClicked())
 		{
 			if (pWindow->isKeyPressed(PH_KEY_W))
 			{
-				camera.ProcessKeyboard(Camera_Movement::FORWARD, 0.016f);
+				camera.keys.up = true;
 			}
 			if (pWindow->isKeyPressed(PH_KEY_S))
 			{
-				camera.ProcessKeyboard(Camera_Movement::BACKWARD, 0.016f);
+				camera.keys.down = true;
 			}
 			if (pWindow->isKeyPressed(PH_KEY_A))
 			{
-				camera.ProcessKeyboard(Camera_Movement::LEFT, 0.016f);
+				camera.keys.left = true;
 			}
 			if (pWindow->isKeyPressed(PH_KEY_D))
 			{
-				camera.ProcessKeyboard(Camera_Movement::RIGHT, 0.016f);
+				camera.keys.right = true;
 			}
 
-			camera.ProcessMouseMovement(xoffset, yoffset);
-			camera.ProcessMouseScroll((float)pWindow->scrollY());
+			camera.rotate(glm::vec3(yoffset * 0.5f, xoffset * 0.5f, 0.0f));
+			camera.update(0.016f);
 
 			return true;
 		}

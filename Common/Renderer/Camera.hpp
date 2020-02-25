@@ -1,136 +1,219 @@
-#pragma once
-
-#include <glm/gtc/matrix_transform.hpp>
-
-enum class Camera_Movement
+enum CameraType
 {
-	FORWARD,
-	BACKWARD,
-	LEFT,
-	RIGHT
+	LookAt,
+	FirstPerson
 };
 
 class Camera
 {
-private:
-	// Default camera values
-	const float SPEED = 2.5f;
-	const float SENSITIVITY = 0.1f;
-	const float ZOOM = 45.0f;
-
-	// Camera Attributes
-	glm::vec3 Position;
-	glm::vec3 Front;
-	glm::vec3 Up;
-	glm::vec3 Right;
-	glm::vec3 WorldUp;
-	
-	glm::mat4 viewMat;
-
-	// Calculates the front vector from the Camera's (updated) Euler Angles
-	void updateCameraVectors()
-	{
-		// Calculate the new Front vector
-		glm::vec3 front;
-		front.x = cos(glm::radians(Yaw)) * cos(glm::radians(Pitch));
-		front.y = -sin(glm::radians(Pitch));
-		front.z = sin(glm::radians(Yaw)) * cos(glm::radians(Pitch));
-		Front = glm::normalize(front);
-		// Also re-calculate the Right and Up vector
-		Right = glm::normalize(glm::cross(Front, WorldUp));  // Normalize the vectors, because their length gets closer to 0 the more you look up or down which results in slower movement.
-		Up = glm::normalize(glm::cross(Right, Front));
-
-		// Update View Matrix
-		viewMat = glm::lookAt(Position, Position + Front, Up);
-	}
-
 public:
-	// Euler Angles
-	float Yaw;
-	float Pitch;
-	// Camera options
-	float MovementSpeed;
-	float MouseSensitivity;
-	float Zoom;
-
-	// Constructor with vectors
-	Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = -90.0f, float pitch = 0.0f)
+	void update(float deltaTime)
 	{
-		Position = position;
-		WorldUp = up;
-		Yaw = yaw;
-		Pitch = pitch;
-		MovementSpeed = SPEED;
-		MouseSensitivity = SENSITIVITY;
-		updateCameraVectors();
-	}
-
-	// Constructor with scalar values
-	Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch)
-	{
-		Position = glm::vec3(posX, posY, posZ);
-		WorldUp = glm::vec3(upX, upY, upZ);
-		Yaw = yaw;
-		Pitch = pitch;
-		updateCameraVectors();
-	}
-
-	// Returns the view matrix calculated using Euler Angles and the LookAt Matrix
-	inline glm::mat4 GetViewMatrix()
-	{
-		return viewMat;
-	}
-
-	void SetPosition(glm::vec3 position)
-	{
-		Position = position;
-		updateCameraVectors();
-	}
-
-	// Processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
-	void ProcessKeyboard(Camera_Movement direction, float deltaTime)
-	{
-		float velocity = MovementSpeed * deltaTime;
-		if (direction == Camera_Movement::FORWARD)
-			Position += Front * velocity;
-		if (direction == Camera_Movement::BACKWARD)
-			Position -= Front * velocity;
-		if (direction == Camera_Movement::LEFT)
-			Position -= Right * velocity;
-		if (direction == Camera_Movement::RIGHT)
-			Position += Right * velocity;
-	}
-
-	// Processes input received from a mouse input system. Expects the offset value in both the x and y direction.
-	void ProcessMouseMovement(float xoffset, float yoffset, bool constrainPitch = true)
-	{
-		xoffset *= MouseSensitivity;
-		yoffset *= MouseSensitivity;
-
-		Yaw += xoffset;
-		Pitch += yoffset;
-
-		// Make sure that when pitch is out of bounds, screen doesn't get flipped
-		if (constrainPitch)
+		updated = false;
+		if (type == CameraType::FirstPerson)
 		{
-			if (Pitch > 89.0f)
-				Pitch = 89.0f;
-			if (Pitch < -89.0f)
-				Pitch = -89.0f;
+			if (moving())
+			{
+				glm::vec3 front;
+				front.x = -cos(glm::radians(rotation.x)) * sin(glm::radians(rotation.y));
+				front.y = sin(glm::radians(rotation.x));
+				front.z = cos(glm::radians(rotation.x)) * cos(glm::radians(rotation.y));
+				front = glm::normalize(front);
+
+				float move_speed = deltaTime * translation_speed;
+
+				if (keys.up)
+				{
+					position += front * move_speed;
+				}
+				if (keys.down)
+				{
+					position -= front * move_speed;
+				}
+				if (keys.left)
+				{
+					position -= glm::normalize(glm::cross(front, glm::vec3(0.0f, 1.0f, 0.0f))) * move_speed;
+				}
+				if (keys.right)
+				{
+					position += glm::normalize(glm::cross(front, glm::vec3(0.0f, 1.0f, 0.0f))) * move_speed;
+				}
+
+				update_view_matrix();
+			}
+		}
+	}
+
+	// Update camera passing separate axis data (gamepad)
+	// Returns true if view or position has been changed
+	bool update_gamepad(glm::vec2 axis_left, glm::vec2 axis_right, float delta_time)
+	{
+		bool changed = false;
+
+		if (type == CameraType::FirstPerson)
+		{
+			// Use the common console thumbstick layout
+			// Left = view, right = move
+
+			const float dead_zone = 0.0015f;
+			const float range = 1.0f - dead_zone;
+
+			glm::vec3 front;
+			front.x = -cos(glm::radians(rotation.x)) * sin(glm::radians(rotation.y));
+			front.y = sin(glm::radians(rotation.x));
+			front.z = cos(glm::radians(rotation.x)) * cos(glm::radians(rotation.y));
+			front = glm::normalize(front);
+
+			float move_speed = delta_time * translation_speed * 2.0f;
+			float new_rotation_speed = delta_time * rotation_speed * 50.0f;
+
+			// Move
+			if (fabsf(axis_left.y) > dead_zone)
+			{
+				float pos = (fabsf(axis_left.y) - dead_zone) / range;
+				position -= front * pos * ((axis_left.y < 0.0f) ? -1.0f : 1.0f) * move_speed;
+				changed = true;
+			}
+			if (fabsf(axis_left.x) > dead_zone)
+			{
+				float pos = (fabsf(axis_left.x) - dead_zone) / range;
+				position += glm::normalize(glm::cross(front, glm::vec3(0.0f, 1.0f, 0.0f))) * pos * ((axis_left.x < 0.0f) ? -1.0f : 1.0f) * move_speed;
+				changed = true;
+			}
+
+			// Rotate
+			if (fabsf(axis_right.x) > dead_zone)
+			{
+				float pos = (fabsf(axis_right.x) - dead_zone) / range;
+				rotation.y += pos * ((axis_right.x < 0.0f) ? -1.0f : 1.0f) * new_rotation_speed;
+				changed = true;
+			}
+			if (fabsf(axis_right.y) > dead_zone)
+			{
+				float pos = (fabsf(axis_right.y) - dead_zone) / range;
+				rotation.x -= pos * ((axis_right.y < 0.0f) ? -1.0f : 1.0f) * new_rotation_speed;
+				changed = true;
+			}
+		}
+		else
+		{
+			// todo: move code from example base class for look-at
 		}
 
-		// Update Front, Right and Up Vectors using the updated Euler angles
-		updateCameraVectors();
+		if (changed)
+		{
+			update_view_matrix();
+		}
+
+		return changed;
 	}
 
-	// Processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
-	void ProcessMouseScroll(float yoffset)
+	CameraType type = CameraType::LookAt;
+
+	glm::vec3 rotation = glm::vec3();
+	glm::vec3 position = glm::vec3();
+
+	float rotation_speed = 1.0f;
+	float translation_speed = 1.0f;
+
+	bool updated = false;
+
+	struct
 	{
-		if (Zoom >= 1.0f && Zoom <= 45.0f)
-			Zoom -= yoffset;
-		if (Zoom <= 1.0f)
-			Zoom = 1.0f;
-		if (Zoom >= 45.0f)
-			Zoom = 45.0f;
+		glm::mat4 perspective;
+		glm::mat4 view;
+	} matrices;
+
+	struct
+	{
+		bool left = false;
+		bool right = false;
+		bool up = false;
+		bool down = false;
+	} keys;
+
+	bool moving()
+	{
+		return keys.left || keys.right || keys.up || keys.down;
+	}
+
+	float get_near_clip()
+	{
+		return znear;
+	}
+
+	float get_far_clip()
+	{
+		return zfar;
+	}
+
+	void set_perspective(float fov, float aspect, float znear, float zfar)
+	{
+		this->fov = fov;
+		this->znear = znear;
+		this->zfar = zfar;
+		matrices.perspective = glm::perspective(glm::radians(fov), aspect, znear, zfar);
+	}
+
+	void update_aspect_ratio(float aspect)
+	{
+		matrices.perspective = glm::perspective(glm::radians(fov), aspect, znear, zfar);
+	}
+
+	void set_position(const glm::vec3& position)
+	{
+		this->position = position;
+		update_view_matrix();
+	}
+
+	void set_rotation(const glm::vec3& rotation)
+	{
+		this->rotation = rotation;
+		update_view_matrix();
+	}
+
+	void rotate(const glm::vec3& delta)
+	{
+		this->rotation += delta;
+		update_view_matrix();
+	}
+
+	void set_translation(const glm::vec3& translation)
+	{
+		this->position = translation;
+		update_view_matrix();
+	}
+
+	void translate(const glm::vec3& delta)
+	{
+		this->position += delta;
+		update_view_matrix();
+	}
+
+private:
+	float fov;
+	float znear, zfar;
+
+	void update_view_matrix()
+	{
+		glm::mat4 rotation_matrix = glm::mat4(1.0f);
+		glm::mat4 transformation_matrix;
+
+		rotation_matrix = glm::rotate(rotation_matrix, glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+		rotation_matrix = glm::rotate(rotation_matrix, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+		rotation_matrix = glm::rotate(rotation_matrix, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+
+		transformation_matrix = glm::translate(glm::mat4(1.0f), position);
+
+		if (type == CameraType::FirstPerson)
+		{
+			matrices.view = rotation_matrix * transformation_matrix;
+		}
+		else
+		{
+			matrices.view = transformation_matrix * rotation_matrix;
+		}
+
+		updated = true;
 	}
 };
