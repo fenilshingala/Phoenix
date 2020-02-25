@@ -12,9 +12,9 @@
 #include <imgui/imgui_impl_opengl3.h>
 
 Window::Window() :
-pWindow(nullptr), SCR_WIDTH(800), SCR_HEIGHT(600), suitableWidth(800), suitableHeight(600), exitProgram(false), isResized(false), isMinimized(false),
+pWindow(nullptr), SCR_WIDTH(0), SCR_HEIGHT(0), suitableWidth(0), suitableHeight(0), exitProgram(false), isResized(false), isMinimized(false),
 lastMouseX(0), lastMouseY(0), mMouseX(0), mMouseY(0), ScrollX(0), ScrollY(0), mTickStart(0), mTickEnd(0), mNeededTicksPerFrame(16.67f),
-mFrameTime(0.0f), mActualFrameTime(0.0f)
+mFrameTime(0.0f), mActualFrameTime(0.0f), windowTitle("My Cool Framework!")
 {
 }
 
@@ -58,18 +58,21 @@ void Window::initWindow()
 		}
 	}
 
-	float enforcedRatio = 16.0f / 9.0f;
-	SCR_WIDTH = (int)(mode.w * 0.9);
-	SCR_HEIGHT = (int)(mode.h * 0.9);
-	if (SCR_WIDTH / SCR_HEIGHT < enforcedRatio)
+	if (SCR_WIDTH == 0 || SCR_HEIGHT == 0)
 	{
-		if (SCR_HEIGHT < SCR_WIDTH)
-			SCR_HEIGHT = (int)(SCR_WIDTH / enforcedRatio);
-		else
-			SCR_WIDTH = (int)(SCR_HEIGHT * enforcedRatio);
+		float enforcedRatio = 16.0f / 9.0f;
+		SCR_WIDTH = (int)(mode.w * 0.9);
+		SCR_HEIGHT = (int)(mode.h * 0.9);
+		if (SCR_WIDTH / SCR_HEIGHT < enforcedRatio)
+		{
+			if (SCR_HEIGHT < SCR_WIDTH)
+				SCR_HEIGHT = (int)(SCR_WIDTH / enforcedRatio);
+			else
+				SCR_WIDTH = (int)(SCR_HEIGHT * enforcedRatio);
+		}
 	}
-
-	suitableWidth = SCR_WIDTH;
+	
+	suitableWidth  = SCR_WIDTH;
 	suitableHeight = SCR_HEIGHT;
 
 	uint32_t flags = SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE;
@@ -77,7 +80,7 @@ void Window::initWindow()
 	flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 #endif
 
-	pWindow = SDL_CreateWindow("My Cool Framework!",
+	pWindow = SDL_CreateWindow(windowTitle.c_str(),
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		SCR_WIDTH, SCR_HEIGHT,
 		flags);

@@ -3,7 +3,8 @@ int main(int argc, char** argv)										\
 {																	\
 	try {															\
 		Application* app = new Application();						\
-		app->initVulkan();											\
+		app->Init();												\
+		app->Load();												\
 																	\
 		while (!app->pWindow->windowShouldClose())					\
 		{															\
@@ -16,7 +17,8 @@ int main(int argc, char** argv)										\
 		}															\
 																	\
 		app->waitDeviceIdle();										\
-		app->cleanupVulkan();										\
+		app->UnLoad();												\
+		app->Exit();												\
 		delete app;													\
 	}																\
 	catch (const std::exception & e) {								\

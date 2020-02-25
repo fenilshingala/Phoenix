@@ -212,6 +212,12 @@ public:
 
 	void Init()
 	{
+		Settings settings;
+		settings.maxInFlightFrames = 3;
+		settings.app_name = "Ray Tracing - Reflections";
+
+		initRenderer(settings);
+
 		camera.rotation_speed *= 0.25f;
 		camera.translation_speed *= 0.5f;
 		camera.type = CameraType::FirstPerson;
@@ -390,6 +396,8 @@ public:
 
 		// MODEL
 		PH_DeleteModel(&model);
+
+		exitRenderer();
 	}
 
 	void Load()	override

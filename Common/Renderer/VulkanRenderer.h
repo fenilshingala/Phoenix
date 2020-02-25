@@ -20,9 +20,10 @@
 
 struct Settings
 {
-	int windowWidth = 0;
-	int windowHeight = 0;
-	uint32_t maxInFlightFrames = 2;
+	int				windowWidth	 = 0;
+	int				windowHeight = 0;
+	std::string		app_name;
+	uint32_t		maxInFlightFrames = 2;
 };
 
 struct PH_ImageCreateInfo
@@ -152,8 +153,10 @@ class VulkanRenderer
 {
 public:
 	VulkanRenderer();
+	virtual ~VulkanRenderer();
 
-	~VulkanRenderer();
+	void initRenderer(Settings settings);
+	void exitRenderer();
 
 	///////////////////////////////////////////
 	//// VULKAN
@@ -297,4 +300,6 @@ private:
 
 	// current swapchain image index
 	uint32_t imageIndex;
+
+	std::string app_name;
 };

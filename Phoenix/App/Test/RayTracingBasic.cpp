@@ -212,6 +212,12 @@ public:
 
 	void Init()
 	{
+		Settings settings;
+		settings.maxInFlightFrames = 3;
+		settings.app_name = "Ray Tracing - Triangle";
+
+		initRenderer(settings);
+
 		camera.rotation_speed *= 0.25f;
 		camera.translation_speed *= 0.5f;
 		camera.type = CameraType::FirstPerson;
@@ -434,6 +440,8 @@ public:
 
 		// Vertex Buffer
 		PH_DeleteBuffer(&vertexBuffer);
+
+		exitRenderer();
 	}
 
 	void Load() override

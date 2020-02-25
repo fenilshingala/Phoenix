@@ -3,6 +3,7 @@
 #include "keyBindings.h"
 #include <imgui/imgui.h>
 #include <stdint.h>
+#include <string>
 
 class Window
 {
@@ -18,10 +19,14 @@ public:
 
 	inline int getWindowWidth();
 	inline int getWindowHeight();
+	inline void setWindowWidth(int val);
+	inline void setWindowHeight(int val);
 
 	inline bool windowShouldClose();
 	inline bool isWindowResized();
 	inline bool isWindowMinimized();
+
+	inline void setWindowTitle(const char* name);
 
 	// MOUSE
 	bool isLeftClicked();
@@ -96,6 +101,8 @@ private:
 	float mNeededTicksPerFrame;
 	float mFrameTime;
 	float mActualFrameTime;
+
+	std::string windowTitle;
 };
 
 inline int Window::getWindowWidth()
@@ -106,6 +113,16 @@ inline int Window::getWindowWidth()
 inline int Window::getWindowHeight()
 {
 	return SCR_HEIGHT;
+}
+
+inline void Window::setWindowWidth(int val)
+{
+	SCR_WIDTH = val;
+}
+
+inline void Window::setWindowHeight(int val)
+{
+	SCR_HEIGHT = val;
 }
 
 inline bool Window::windowShouldClose()
@@ -121,4 +138,9 @@ inline bool Window::isWindowResized()
 inline bool Window::isWindowMinimized()
 {
 	return isMinimized;
+}
+
+inline void Window::setWindowTitle(const char* name)
+{
+	windowTitle = name;
 }
