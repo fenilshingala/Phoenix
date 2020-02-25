@@ -71,23 +71,23 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IntDir>$(SolutionDir)$(Configuration)\Intermediates\$(ProjectName)\$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)..\Common\Thirdparty\;$(SolutionDir)..\Common\Thirdparty\SDL2-2.0.10\include\;$(VULKAN_SDK)\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Configuration)\;$(SolutionDir)..\Common\Thirdparty\SDL2-2.0.10\libs\$(Platform)\$(Configuration)\;$(VULKAN_SDK)\Lib32;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86</LibraryPath>
+    <IncludePath>$(SolutionDir)..\Common\Thirdparty\;$(SolutionDir)..\Common\Thirdparty\SDL2-2.0.10\include\;$(SolutionDir)..\Common\Thirdparty\assimp-5.0.0\include;$(VULKAN_SDK)\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)$(Configuration)\;$(SolutionDir)..\Common\Thirdparty\SDL2-2.0.10\libs\$(Platform)\$(Configuration)\;$(SolutionDir)..\Common\Thirdparty\assimp-5.0.0\libs\$(Platform)\$(Configuration);$(VULKAN_SDK)\Lib32;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)..\Common\Thirdparty\;$(SolutionDir)..\Common\Thirdparty\SDL2-2.0.10\include\;$(VULKAN_SDK)\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Configuration)\;$(SolutionDir)..\Common\Thirdparty\SDL2-2.0.10\libs\$(Platform)\$(Configuration)\;$(VULKAN_SDK)\Lib;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
+    <IncludePath>$(SolutionDir)..\Common\Thirdparty\;$(SolutionDir)..\Common\Thirdparty\SDL2-2.0.10\include\;$(SolutionDir)..\Common\Thirdparty\assimp-5.0.0\include;$(VULKAN_SDK)\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)$(Configuration)\;$(SolutionDir)..\Common\Thirdparty\SDL2-2.0.10\libs\$(Platform)\$(Configuration)\;$(SolutionDir)..\Common\Thirdparty\assimp-5.0.0\libs\$(Platform)\$(Configuration);$(VULKAN_SDK)\Lib;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
     <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)$(Configuration)\Intermediates\$(ProjectName)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(SolutionDir)..\Common\Thirdparty\;$(SolutionDir)..\Common\Thirdparty\SDL2-2.0.10\include\;$(VULKAN_SDK)\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Configuration)\;$(SolutionDir)..\Common\Thirdparty\SDL2-2.0.10\libs\$(Platform)\$(Configuration)\;$(VULKAN_SDK)\Lib32;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86</LibraryPath>
+    <IncludePath>$(SolutionDir)..\Common\Thirdparty\;$(SolutionDir)..\Common\Thirdparty\SDL2-2.0.10\include\;$(SolutionDir)..\Common\Thirdparty\assimp-5.0.0\include;$(VULKAN_SDK)\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)$(Configuration)\;$(SolutionDir)..\Common\Thirdparty\SDL2-2.0.10\libs\$(Platform)\$(Configuration)\;$(SolutionDir)..\Common\Thirdparty\assimp-5.0.0\libs\$(Platform)\$(Configuration);$(VULKAN_SDK)\Lib32;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86</LibraryPath>
     <IntDir>$(SolutionDir)$(Configuration)\Intermediates\$(ProjectName)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(SolutionDir)..\Common\Thirdparty\;$(SolutionDir)..\Common\Thirdparty\SDL2-2.0.10\include\;$(VULKAN_SDK)\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Configuration)\;$(SolutionDir)..\Common\Thirdparty\SDL2-2.0.10\libs\$(Platform)\$(Configuration)\;$(VULKAN_SDK)\Lib;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
+    <IncludePath>$(SolutionDir)..\Common\Thirdparty\;$(SolutionDir)..\Common\Thirdparty\SDL2-2.0.10\include\;$(SolutionDir)..\Common\Thirdparty\assimp-5.0.0\include;$(VULKAN_SDK)\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)$(Configuration)\;$(SolutionDir)..\Common\Thirdparty\SDL2-2.0.10\libs\$(Platform)\$(Configuration)\;$(SolutionDir)..\Common\Thirdparty\assimp-5.0.0\libs\$(Platform)\$(Configuration);$(VULKAN_SDK)\Lib;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
     <IntDir>$(SolutionDir)$(Configuration)\Intermediates\$(ProjectName)\$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
   </PropertyGroup>
@@ -100,13 +100,13 @@
       <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>SDL2d.lib;vulkan-1.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL2d.lib;vulkan-1.lib;assimp-vc141-mtd.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>
       </SubSystem>
     </Link>
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>copy /Y "$(SolutionDir)..\Common\Thirdparty\SDL2-2.0.10\dlls\$(Platform)\$(Configuration)" "$(SolutionDir)$(Configuration)"
+copy /Y "$(SolutionDir)..\Common\Thirdparty\assimp-5.0.0\dlls\$(Platform)\$(Configuration)" "$(SolutionDir)$(Configuration)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -118,11 +118,11 @@
       <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>SDL2d.lib;vulkan-1.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL2d.lib;vulkan-1.lib;assimp-vc141-mtd.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>copy /Y "$(SolutionDir)..\Common\Thirdparty\SDL2-2.0.10\dlls\$(Platform)\$(Configuration)" "$(SolutionDir)$(Configuration)"
+copy /Y "$(SolutionDir)..\Common\Thirdparty\assimp-5.0.0\dlls\$(Platform)\$(Configuration)" "$(SolutionDir)$(Configuration)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -138,13 +138,13 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>SDL2.lib;vulkan-1.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL2.lib;vulkan-1.lib;assimp-vc141-mt.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>
       </SubSystem>
     </Link>
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>copy /Y "$(SolutionDir)..\Common\Thirdparty\SDL2-2.0.10\dlls\$(Platform)\$(Configuration)" "$(SolutionDir)$(Configuration)"
+copy /Y "$(SolutionDir)..\Common\Thirdparty\assimp-5.0.0\dlls\$(Platform)\$(Configuration)" "$(SolutionDir)$(Configuration)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -160,20 +160,37 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>SDL2.lib;vulkan-1.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL2.lib;vulkan-1.lib;assimp-vc141-mt.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>copy /Y "$(SolutionDir)..\Common\Thirdparty\SDL2-2.0.10\dlls\$(Platform)\$(Configuration)" "$(SolutionDir)$(Configuration)"
+copy /Y "$(SolutionDir)..\Common\Thirdparty\assimp-5.0.0\dlls\$(Platform)\$(Configuration)" "$(SolutionDir)$(Configuration)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Common\Renderer\main.cpp" />
     <ClCompile Include="..\..\Common\Renderer\VulkanRenderer.cpp" />
+    <ClCompile Include="..\..\Common\Renderer\Window.cpp" />
+    <ClCompile Include="..\App\Test\RayTracingBasic.cpp" />
+    <ClCompile Include="..\App\Test\RayTracingReflections.cpp" />
+    <ClCompile Include="..\App\Test\VulkanTutorial.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\Common\Renderer\Application.h" />
+    <ClInclude Include="..\..\Common\Renderer\Camera.hpp" />
     <ClInclude Include="..\..\Common\Renderer\keyBindings.h" />
     <ClInclude Include="..\..\Common\Renderer\VulkanRenderer.h" />
+    <ClInclude Include="..\..\Common\Renderer\Window.h" />
+    <ClInclude Include="..\App\Test\Picker.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\App\Test\Shaders\basic.frag" />
+    <None Include="..\App\Test\Shaders\basic.vert" />
+    <None Include="..\App\Test\Shaders\closesthit.rchit" />
+    <None Include="..\App\Test\Shaders\miss.rmiss" />
+    <None Include="..\App\Test\Shaders\raygen.rgen" />
+    <None Include="..\App\Test\Shaders\ref_closesthit.rchit" />
+    <None Include="..\App\Test\Shaders\ref_miss.rmiss" />
+    <None Include="..\App\Test\Shaders\ref_raygen.rgen" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

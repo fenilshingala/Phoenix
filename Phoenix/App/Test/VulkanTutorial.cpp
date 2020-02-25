@@ -1,13 +1,13 @@
-#include "VulkanRenderer.h"
+#include "Picker.h"
+
+#if (VULKAN_TUTORIAL)
+
+#include "../../../Common/Renderer/VulkanRenderer.h"
+#include "../../../Common/Renderer/Application.h"
 
 #include <chrono>
-#include <vector>
+#include <stdexcept>
 #include <iostream>
-
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 
 struct UniformBufferObject
 {
@@ -23,7 +23,9 @@ struct Vertex
 	glm::vec2 texCoord;
 
 	Vertex(glm::vec3 _pos, glm::vec3 _color, glm::vec2 _texCoord)
-	{ pos = _pos; color = _color; texCoord = _texCoord; }
+	{
+		pos = _pos; color = _color; texCoord = _texCoord;
+	}
 
 	static VkVertexInputBindingDescription getBindingDescription()
 	{
@@ -77,6 +79,10 @@ std::vector<VkDescriptorSet> descriptorSets;
 
 class Application : public VulkanRenderer
 {
+	bool firstMouse = true;
+	float lastX = 0.0f;
+	float lastY = 0.0f;
+
 public:
 	Application()
 	{}
@@ -86,6 +92,13 @@ public:
 
 	void Init()
 	{
+		camera.rotation_speed *= 0.25f;
+		camera.translation_speed *= 0.5f;
+		camera.type = CameraType::FirstPerson;
+		camera.set_perspective(60.0f, (float)swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 512.0f);
+		camera.set_rotation(glm::vec3(-18.0f, -5.0f, 0.0f));
+		camera.set_translation(glm::vec3(0.0f, 2.0f, -3.7f));
+
 		vertices.emplace_back(Vertex(glm::vec3(-0.5f, -0.5f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec2(1.0f, 0.0f)));
 		vertices.emplace_back(Vertex(glm::vec3(0.5f, -0.5f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 0.0f)));
 		vertices.emplace_back(Vertex(glm::vec3(0.5f, 0.5f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 1.0f)));
@@ -106,7 +119,7 @@ public:
 			vertexBufferInfo.bufferSize = (VkDeviceSize)(sizeof(vertices[0]) * vertices.size());
 			vertexBufferInfo.bufferUsageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 			vertexBufferInfo.memoryPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-			PH_CreateBuffer(vertexBufferInfo, vertexBuffer);
+			PH_CreateBuffer(vertexBufferInfo, &vertexBuffer);
 		}
 
 		// Index Buffer
@@ -116,13 +129,19 @@ public:
 			indexBufferInfo.bufferSize = (VkDeviceSize)(sizeof(indices[0]) * indices.size());
 			indexBufferInfo.bufferUsageFlags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 			indexBufferInfo.memoryPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-			PH_CreateBuffer(indexBufferInfo, indexBuffer);
+			PH_CreateBuffer(indexBufferInfo, &indexBuffer);
 		}
 
 		// Texture Image
 		{
-			texture.path = "../../Phoenix/App/Test/textures/texture.jpg";
-			PH_CreateTexture(texture);
+			PH_ImageCreateInfo textureInfo;
+			textureInfo.path = "../../Phoenix/App/Test/textures/texture.jpg";
+			textureInfo.aspectBits = VK_IMAGE_ASPECT_COLOR_BIT;
+			textureInfo.memoryProperty = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+			textureInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+			textureInfo.usageFlags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+			
+			PH_CreateTexture(textureInfo, &texture);
 		}
 
 		// sampler
@@ -132,48 +151,48 @@ public:
 
 		//shader module
 		{
-			vertexShaderModule = PH_CreateShaderModule("../../Phoenix/App/Test/Shaders/SpirV/vert.spv");
-			fragmentShaderModule = PH_CreateShaderModule("../../Phoenix/App/Test/Shaders/SpirV/frag.spv");
+			PH_CreateShaderModule("../../Phoenix/App/Test/Shaders/SpirV/vert.spv", &vertexShaderModule);
+			PH_CreateShaderModule("../../Phoenix/App/Test/Shaders/SpirV/frag.spv", &fragmentShaderModule);
 		}
 	}
 
 	void Exit()
 	{
 		// shader modules
-		PH_DestroyShaderModule(vertexShaderModule);
-		PH_DestroyShaderModule(fragmentShaderModule);
+		PH_DestroyShaderModule(&vertexShaderModule);
+		PH_DestroyShaderModule(&fragmentShaderModule);
 
 		// sampler
-		PH_DeleteSampler(sampler);
+		PH_DeleteSampler(&sampler);
 
 		// Texture Image
-		PH_DeleteTexture(texture);
+		PH_DeleteTexture(&texture);
 
 		// Index Buffer
-		PH_DeleteBuffer(indexBuffer);
+		PH_DeleteBuffer(&indexBuffer);
 
 		// Vertex Buffer
-		PH_DeleteBuffer(vertexBuffer);
+		PH_DeleteBuffer(&vertexBuffer);
 	}
 
 	void Load() override
 	{
 		// Uniform Buffers
 		{
-			uint32_t noOfImages =  GetNoOfSwapChains();
+			uint32_t maxImages = (uint32_t)swapChainImages.size();
 			PH_BufferCreateInfo uniformBufferInfo;
 			uniformBufferInfo.bufferSize = (VkDeviceSize)(sizeof(UniformBufferObject));
-			uniformBufferInfo.bufferUsageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;	
+			uniformBufferInfo.bufferUsageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 			uniformBufferInfo.memoryPropertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-			for (uint32_t i = 0; i < noOfImages; ++i)
+			for (uint32_t i = 0; i < maxImages; ++i)
 			{
-				PH_CreateBuffer(uniformBufferInfo, uniformBuffers[i]);
+				PH_CreateBuffer(uniformBufferInfo, &uniformBuffers[i]);
 			}
 		}
 
-		createDescriptorPool();
 		createDescriptorSetLayout();
-		createGraphicsPipeline();
+		createPipeline();
+		createDescriptorPool();
 		createDescriptorSets();
 		RecordCommandBuffers();
 	}
@@ -181,15 +200,15 @@ public:
 	void UnLoad() override
 	{
 		// cleanup
-		PH_DeleteGraphicsPipeline(graphicsPipeline);
-		PH_DeletePipelineLayout(pipelineLayout);
-		PH_DeleteDescriptorSetLayout(descriptorSetLayout);
-		PH_DeleteDescriptorPool(descriptorPool);
+		PH_DeleteDescriptorSetLayout(&descriptorSetLayout);
+		PH_DeleteDescriptorPool(&descriptorPool);
+		PH_DeleteGraphicsPipeline(&graphicsPipeline);
+		PH_DeletePipelineLayout(&pipelineLayout);
 
-		const int maxImages = GetNoOfSwapChains();
+		const int maxImages = (const int)swapChainImages.size();
 		for (int i = 0; i < maxImages; ++i)
 		{
-			PH_DeleteBuffer(uniformBuffers[i]);
+			PH_DeleteBuffer(&uniformBuffers[i]);
 		}
 	}
 
@@ -198,7 +217,7 @@ public:
 	void createDescriptorSetLayout() override
 	{
 		std::vector<VkDescriptorSetLayoutBinding> bindings;
-		
+
 		VkDescriptorSetLayoutBinding uboLayoutBinding = {};
 		uboLayoutBinding.binding = 0;
 		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -206,7 +225,7 @@ public:
 		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 		uboLayoutBinding.pImmutableSamplers = nullptr;
 		bindings.emplace_back(uboLayoutBinding);
-		
+
 		VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
 		samplerLayoutBinding.binding = 1;
 		samplerLayoutBinding.descriptorCount = 1;
@@ -214,19 +233,17 @@ public:
 		samplerLayoutBinding.pImmutableSamplers = nullptr;
 		samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings.emplace_back(samplerLayoutBinding);
-		
+
 		VkDescriptorSetLayoutCreateInfo layoutInfo = {};
 		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
 		layoutInfo.pBindings = bindings.data();
-		
-		PH_CreateDescriptorSetLayout(layoutInfo, descriptorSetLayout);
+
+		PH_CreateDescriptorSetLayout(layoutInfo, &descriptorSetLayout);
 	}
 
-	void createGraphicsPipeline() override
+	void createPipeline() override
 	{
-		VkExtent2D swapChainExtent = GetSwapChainExtent();
-
 		VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
 		vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -243,10 +260,10 @@ public:
 
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	
-		VkVertexInputBindingDescription bindingDescription						 = Vertex::getBindingDescription();
+
+		VkVertexInputBindingDescription bindingDescription = Vertex::getBindingDescription();
 		std::vector<VkVertexInputAttributeDescription> attributeDescriptions = Vertex::getAttributeDescriptions();
-	
+
 		vertexInputInfo.vertexBindingDescriptionCount = 1;
 		vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
 		vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
@@ -325,8 +342,8 @@ public:
 		pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout; // Optional
 		pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
 		pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
-	
-		PH_CreatePipelineLayout(pipelineLayoutInfo, pipelineLayout);
+
+		PH_CreatePipelineLayout(pipelineLayoutInfo, &pipelineLayout);
 
 		VkGraphicsPipelineCreateInfo pipelineInfo = {};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -353,53 +370,46 @@ public:
 		depthStencil.front = {}; // Optional
 		depthStencil.back = {}; // Optional
 		pipelineInfo.pDepthStencilState = &depthStencil;
-		
+
 		pipelineInfo.layout = pipelineLayout;
-		pipelineInfo.renderPass = GetDefaultRenderPass();
+		pipelineInfo.renderPass = renderPass;
 		pipelineInfo.subpass = 0;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
 		pipelineInfo.basePipelineIndex = -1; // Optional
 
-		PH_CreateGraphicsPipeline(pipelineInfo, graphicsPipeline);
+		PH_CreateGraphicsPipeline(pipelineInfo, &graphicsPipeline);
 	}
 
-	void createDescriptorPool()
+	void createDescriptorPool() override
 	{
-		uint32_t noOfSCImages = GetNoOfSwapChains();
-
 		std::vector<VkDescriptorPoolSize> poolSizes(2);
 		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		poolSizes[0].descriptorCount = static_cast<uint32_t>(noOfSCImages);
+		poolSizes[0].descriptorCount = static_cast<uint32_t>(swapChainImages.size());
 		poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[1].descriptorCount = static_cast<uint32_t>(noOfSCImages);
+		poolSizes[1].descriptorCount = static_cast<uint32_t>(swapChainImages.size());
 
-		VkDescriptorPoolCreateInfo poolInfo = {};
-		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-		poolInfo.pPoolSizes = poolSizes.data();
-		poolInfo.maxSets = static_cast<uint32_t>(noOfSCImages);
-
-		PH_CreateDescriptorPool(poolInfo, descriptorPool);
+		PH_CreateDescriptorPool((uint32_t)poolSizes.size(), poolSizes.data(), (uint32_t)swapChainImages.size(), &descriptorPool);
 	}
 
 	void createDescriptorSets() override
 	{
-		const int max_frames =  GetNoOfSwapChains();
+		const int maxImages = (const int)swapChainImages.size();
 
-		PH_CreateDescriptorSets(descriptorSetLayout, max_frames, descriptorPool, descriptorSets);
-		
-		for (size_t i = 0; i < max_frames; ++i)
+		descriptorSets.resize(maxImages);
+		PH_CreateDescriptorSets(descriptorSetLayout, maxImages, descriptorPool, (VkDescriptorSet*)descriptorSets.data());
+
+		for (size_t i = 0; i < maxImages; ++i)
 		{
 			VkDescriptorBufferInfo bufferInfo = {};
 			bufferInfo.buffer = uniformBuffers[i].buffer;
 			bufferInfo.offset = 0;
 			bufferInfo.range = sizeof(UniformBufferObject); // or VK_WHOLE_SIZE
-		
+
 			VkDescriptorImageInfo imageInfo = {};
 			imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			imageInfo.imageView = texture.imageView;
 			imageInfo.sampler = sampler;
-		
+
 			std::vector<VkWriteDescriptorSet> descriptorWrites(2);
 			descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrites[0].dstSet = descriptorSets[i];
@@ -410,7 +420,7 @@ public:
 			descriptorWrites[0].pBufferInfo = &bufferInfo;
 			descriptorWrites[0].pImageInfo = nullptr; // Optional
 			descriptorWrites[0].pTexelBufferView = nullptr; // Optional
-		
+
 			descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrites[1].dstSet = descriptorSets[i];
 			descriptorWrites[1].dstBinding = 1;
@@ -418,37 +428,13 @@ public:
 			descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 			descriptorWrites[1].descriptorCount = 1;
 			descriptorWrites[1].pImageInfo = &imageInfo;
-		
+
 			PH_UpdateDeDescriptorSets(descriptorWrites);
 		}
 	}
 
-	void UpdateUniformBuffer(uint32_t imageIndex)
-	{
-		const VkExtent2D swapChainExtent = GetSwapChainExtent();
-
-		static std::chrono::time_point<std::chrono::steady_clock>	startTime   = std::chrono::high_resolution_clock::now();
-		std::chrono::time_point<std::chrono::steady_clock>			currentTime = std::chrono::high_resolution_clock::now();
-		float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-
-		UniformBufferObject ubo = {};
-		ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-		ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-		ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
-		ubo.proj[1][1] *= -1;
-
-		PH_BufferUpdateInfo bufferUpdate;
-		bufferUpdate.buffer		= uniformBuffers[imageIndex];
-		bufferUpdate.data		= &ubo;
-		bufferUpdate.dataSize	= sizeof(UniformBufferObject);
-
-		PH_UpdateBuffer(bufferUpdate);
-	}
-
 	void RecordCommandBuffers() override
 	{
-		std::vector<VkCommandBuffer> commandBuffers = GetCommandBuffers();
-
 		for (uint32_t i = 0; i < commandBuffers.size(); i++)
 		{
 			VkCommandBufferBeginInfo beginInfo = {};
@@ -463,10 +449,10 @@ public:
 
 			VkRenderPassBeginInfo renderPassInfo = {};
 			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass = GetDefaultRenderPass();
-			renderPassInfo.framebuffer = *(GetSwapChainFrameBuffers()+ i);
+			renderPassInfo.renderPass = renderPass;
+			renderPassInfo.framebuffer = swapChainFramebuffers[i];
 			renderPassInfo.renderArea.offset = { 0, 0 };
-			renderPassInfo.renderArea.extent = GetSwapChainExtent();
+			renderPassInfo.renderArea.extent = swapChainExtent;
 
 			std::vector<VkClearValue> clearValues;
 			VkClearValue clearValue;
@@ -502,49 +488,94 @@ public:
 		}
 	}
 
+	void UpdateUniformBuffer(uint32_t imageIndex)
+	{
+		static std::chrono::time_point<std::chrono::steady_clock>	startTime = std::chrono::high_resolution_clock::now();
+		std::chrono::time_point<std::chrono::steady_clock>			currentTime = std::chrono::high_resolution_clock::now();
+		float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+		UniformBufferObject ubo = {};
+
+		ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+		ubo.model = glm::rotate(ubo.model, time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.model = glm::scale(ubo.model, glm::vec3(2.0f));
+		ubo.proj = camera.matrices.perspective;
+		ubo.view = camera.matrices.view;
+
+		PH_BufferUpdateInfo bufferUpdate;
+		bufferUpdate.buffer = uniformBuffers[imageIndex];
+		bufferUpdate.data = &ubo;
+		bufferUpdate.dataSize = sizeof(UniformBufferObject);
+
+		PH_UpdateBuffer(bufferUpdate);
+	}
+
+	bool UpdateCamera()
+	{
+		// CAMERA UPDATE
+		float xpos = (float)pWindow->mouseX();
+		float ypos = (float)pWindow->mouseY();
+		if (firstMouse)
+		{
+			lastX = xpos;
+			lastY = ypos;
+			firstMouse = false;
+		}
+
+		float xoffset = xpos - lastX;
+		float yoffset = lastY - ypos;
+
+		lastX = xpos;
+		lastY = ypos;
+
+		camera.keys.up = false;
+		camera.keys.down = false;
+		camera.keys.left = false;
+		camera.keys.right = false;
+
+		if (pWindow->isRightClicked())
+		{
+			if (pWindow->isKeyPressed(PH_KEY_W))
+			{
+				camera.keys.up = true;
+			}
+			if (pWindow->isKeyPressed(PH_KEY_S))
+			{
+				camera.keys.down = true;
+			}
+			if (pWindow->isKeyPressed(PH_KEY_A))
+			{
+				camera.keys.left = true;
+			}
+			if (pWindow->isKeyPressed(PH_KEY_D))
+			{
+				camera.keys.right = true;
+			}
+
+			camera.rotate(glm::vec3(yoffset * 0.5f, xoffset * 0.5f, 0.0f));
+			camera.update(0.016f);
+
+			return true;
+		}
+
+		return false;
+	}
+
 	void DrawFrame() override
 	{
 		uint32_t imageIndex = PH_PrepareNextFrame();
 
 		if (imageIndex != -1) // invalid
 		{
+			UpdateCamera();
 			UpdateUniformBuffer(imageIndex);
-
+			
 			PH_SubmitFrame();
-		}
-		else
-		{
-			int x = 0;
 		}
 	}
 };
 
-int main()
-{
-	try {
-		Application* app = new Application();
-		app->initWindow();
-		app->initVulkan();
+PHOENIX_MAIN(Application)
 
-		while (!app->windowShouldClose())
-		{
-			app->pollEvents();
-			if (app->isKeyPressed(PH_KEY_ESCAPE))
-			{
-				break;
-			}
-			app->DrawFrame();
-		}
 
-		app->waitDeviceIdle();
-		app->cleanupVulkan();
-		app->destroyWindow();
-		delete app;
-	}
-	catch (const std::exception& e) {
-		std::cerr << e.what() << std::endl;
-		return EXIT_FAILURE;
-	}
-
-	return EXIT_SUCCESS;
-}
+#endif

@@ -1,33 +1,94 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
     <Filter Include="Resource Files">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{8d02b13c-c91e-4042-99f0-b4e58f54901d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Phoenix">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Source Files\Examples">
+      <UniqueIdentifier>{475c692d-b1de-4a5c-8f30-db1d6279eabe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\Shaders">
+      <UniqueIdentifier>{42a81e06-262e-4bbf-b18a-cb741e65f073}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\Shaders\RayTracingBasic">
+      <UniqueIdentifier>{4469bf68-f8b7-4e77-8c19-16d055a721a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\Shaders\VulkanTutorial">
+      <UniqueIdentifier>{89cd3b0f-5900-47a5-b713-4cafedd2d9bb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\Shaders\RayTracingReflections">
+      <UniqueIdentifier>{cae1721d-1962-4512-9eb5-28689204b336}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Common\Renderer\main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Common\Renderer\VulkanRenderer.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Phoenix</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\Renderer\Window.cpp">
+      <Filter>Source Files\Phoenix</Filter>
+    </ClCompile>
+    <ClCompile Include="..\App\Test\VulkanTutorial.cpp">
+      <Filter>Source Files\Examples</Filter>
+    </ClCompile>
+    <ClCompile Include="..\App\Test\RayTracingBasic.cpp">
+      <Filter>Source Files\Examples</Filter>
+    </ClCompile>
+    <ClCompile Include="..\App\Test\RayTracingReflections.cpp">
+      <Filter>Source Files\Examples</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\Renderer\VulkanRenderer.h">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Phoenix</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Renderer\keyBindings.h">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Phoenix</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Common\Renderer\Camera.hpp">
+      <Filter>Source Files\Phoenix</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Renderer\Window.h">
+      <Filter>Source Files\Phoenix</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Renderer\Application.h">
+      <Filter>Source Files\Phoenix</Filter>
+    </ClInclude>
+    <ClInclude Include="..\App\Test\Picker.h">
+      <Filter>Source Files\Examples</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\App\Test\Shaders\closesthit.rchit">
+      <Filter>Resource Files\Shaders\RayTracingBasic</Filter>
+    </None>
+    <None Include="..\App\Test\Shaders\miss.rmiss">
+      <Filter>Resource Files\Shaders\RayTracingBasic</Filter>
+    </None>
+    <None Include="..\App\Test\Shaders\raygen.rgen">
+      <Filter>Resource Files\Shaders\RayTracingBasic</Filter>
+    </None>
+    <None Include="..\App\Test\Shaders\basic.vert">
+      <Filter>Resource Files\Shaders\VulkanTutorial</Filter>
+    </None>
+    <None Include="..\App\Test\Shaders\basic.frag">
+      <Filter>Resource Files\Shaders\VulkanTutorial</Filter>
+    </None>
+    <None Include="..\App\Test\Shaders\ref_closesthit.rchit">
+      <Filter>Resource Files\Shaders\RayTracingReflections</Filter>
+    </None>
+    <None Include="..\App\Test\Shaders\ref_miss.rmiss">
+      <Filter>Resource Files\Shaders\RayTracingReflections</Filter>
+    </None>
+    <None Include="..\App\Test\Shaders\ref_raygen.rgen">
+      <Filter>Resource Files\Shaders\RayTracingReflections</Filter>
+    </None>
   </ItemGroup>
 </Project>
