@@ -77,7 +77,7 @@ void Window::initWindow()
 
 	uint32_t flags = SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE;
 #ifndef _DEBUG
-	flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+	//flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 #endif
 
 	pWindow = SDL_CreateWindow(windowTitle.c_str(),

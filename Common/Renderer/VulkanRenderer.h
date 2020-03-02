@@ -13,6 +13,7 @@
 #include <assimp/cimport.h>
 
 #include <vector>
+#include <unordered_map>
 #include <string>
 
 #include "Window.h"
@@ -50,6 +51,8 @@ struct PH_Image
 	int					height;
 	int					nChannels;
 	std::string			path;
+
+	VkSampler			sampler; // for combined image sampler
 };
 
 struct PH_BufferCreateInfo
@@ -136,8 +139,12 @@ public:
 		uint32_t vertexCount;
 		uint32_t indexBase;
 		uint32_t indexCount;
+		uint32_t materialIndex;
 	};
 	std::vector<ModelPart> parts;
+	std::unordered_map<uint32_t, std::vector<PH_Image>> mMeshTexturesMap;
+	std::vector<PH_Image> textures_loaded;
+	std::string directory;
 
 	static const int defaultFlags = aiProcess_FlipWindingOrder | aiProcess_Triangulate | aiProcess_PreTransformVertices | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals;
 
@@ -184,7 +191,8 @@ public:
 	// MODELS
 	void PH_LoadModel(const std::string& filename, VertexLayout layout, PH_Model* ph_model);
 	void PH_DeleteModel(PH_Model* ph_model);
-	
+	std::vector<PH_Image> InitMaterials(const aiMaterial* material, aiTextureType type, std::string typeName, PH_Model* ph_model);
+
 	// DescriptorSet Layout
 	void PH_CreateDescriptorSetLayout(VkDescriptorSetLayoutCreateInfo layoutInfo, VkDescriptorSetLayout* descriptorSetLayout);
 	void PH_DeleteDescriptorSetLayout(VkDescriptorSetLayout* descriptorSetLayout);

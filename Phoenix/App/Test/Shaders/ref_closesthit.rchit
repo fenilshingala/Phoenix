@@ -23,6 +23,7 @@ layout(binding = 2, set = 0) uniform UniformBufferObject
 } ubo;
 layout(binding = 3, set = 0) buffer Vertices { vec4 v[]; } vertices;
 layout(binding = 4, set = 0) buffer Indices { uint i[]; } indices;
+layout(binding = 5, set = 0) uniform sampler2D[] texSampler;
 
 struct Vertex
 {
@@ -30,7 +31,7 @@ struct Vertex
   vec3 normal;
   vec3 color;
   vec2 uv;
-  float _pad0;
+  float materialIndex;
 };
 
 Vertex unpack(uint index)
@@ -43,6 +44,8 @@ Vertex unpack(uint index)
 	v.pos = d0.xyz;
 	v.normal = vec3(d0.w, d1.x, d1.y);
 	v.color = vec3(d1.z, d1.w, d2.x);
+	v.uv = vec2(d2.y, d2.z);
+	v.materialIndex = d2.w;
 	return v;
 }
 
@@ -61,10 +64,12 @@ void main()
 	// Basic lighting
 	vec3 lightVector = normalize(ubo.lightPos.xyz);
 	float dot_product = max(dot(lightVector, normal), 0.6);
-	rayPayload.color = v0.color * vec3(dot_product);
+	//rayPayload.color = v0.color * vec3(dot_product);
+	int matIndex = int(v0.materialIndex);
+	rayPayload.color = texture(texSampler[matIndex], v0.uv).xyz * vec3(dot_product);
 	rayPayload.distance = gl_RayTmaxNV;
 	rayPayload.normal = normal;
 
 	// Objects with full white vertex color are treated as reflectors
-	rayPayload.reflector = ((v0.color.r == 1.0f) && (v0.color.g == 1.0f) && (v0.color.b == 1.0f)) ? 1.0f : 0.0f; 
+	rayPayload.reflector = ((v0.color.r == 1.0f) && (v0.color.g == 1.0f) && (v0.color.b == 1.0f)) ? 0.0f : 0.0f; 
 }

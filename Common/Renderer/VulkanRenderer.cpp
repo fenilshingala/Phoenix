@@ -21,7 +21,9 @@
 const char* deviceExtensions[] = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 	VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
-	VK_NV_RAY_TRACING_EXTENSION_NAME
+	VK_NV_RAY_TRACING_EXTENSION_NAME,
+	VK_KHR_MAINTENANCE3_EXTENSION_NAME,
+	VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME
 };
 
 VulkanRenderer::VulkanRenderer() :
@@ -514,8 +516,18 @@ void VulkanRenderer::createLogicalDevice()
 	// features
 	VkPhysicalDeviceFeatures deviceFeatures = {};
 	deviceFeatures.samplerAnisotropy = VK_TRUE;
-	createInfo.pEnabledFeatures = &deviceFeatures;
+	deviceFeatures.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
+
+	// additional extension features
+	VkPhysicalDeviceDescriptorIndexingFeaturesEXT indexFeature = {};
+	indexFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+	indexFeature.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+	indexFeature.runtimeDescriptorArray = VK_TRUE;
+	indexFeature.pNext = nullptr;
 	
+	createInfo.pEnabledFeatures = &deviceFeatures;
+	createInfo.pNext = &indexFeature;
+
 	// extensions
 	createInfo.enabledExtensionCount = static_cast<uint32_t>(sizeof(deviceExtensions) / sizeof(const char*));
 	createInfo.ppEnabledExtensionNames = deviceExtensions;
@@ -697,8 +709,50 @@ void VulkanRenderer::PH_DestroyShaderModule(VkShaderModule* shaderModule)
 	vkDestroyShaderModule(device, *shaderModule, nullptr);
 }
 
+std::vector<PH_Image> VulkanRenderer::InitMaterials(const aiMaterial* material, aiTextureType type, std::string typeName, PH_Model* ph_model)
+{
+	std::vector<PH_Image> textures;
+	for (unsigned int i = 0; i < material->GetTextureCount(type); i++)
+	{
+		aiString str;
+		material->GetTexture(type, i, &str);
+		// check if texture was loaded before and if so, continue to next iteration: skip loading a new texture
+		bool skip = false;
+		for (unsigned int j = 0; j < ph_model->textures_loaded.size(); j++)
+		{
+			if (std::strcmp(ph_model->textures_loaded[j].path.data(), str.C_Str()) == 0)
+			{
+				textures.push_back(ph_model->textures_loaded[j]);
+				skip = true; // a texture with the same filepath has already been loaded, continue to next one. (optimization)
+				break;
+			}
+		}
+		if (!skip)
+		{   // if texture hasn't been loaded already, load it
+			PH_Image texture;
+			PH_ImageCreateInfo textureInfo;
+			std::string fullPath = ph_model->directory + "/" + str.C_Str();
+			
+			//texture.id = LoadTexture(fullPath.c_str());
+			textureInfo.path = fullPath.c_str();
+			textureInfo.aspectBits = VK_IMAGE_ASPECT_COLOR_BIT;
+			textureInfo.memoryProperty = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+			textureInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+			textureInfo.usageFlags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+			PH_CreateTexture(textureInfo, &texture);
+			texture.sampler = PH_CreateSampler();
+
+			textures.push_back(texture);
+			ph_model->textures_loaded.push_back(texture);  // store it as texture loaded for entire model, to ensure we won't unnecesery load duplicate textures.
+		}
+	}
+	return textures;
+}
+
 void VulkanRenderer::PH_LoadModel(const std::string& filename, VertexLayout layout, PH_Model *ph_model)
 {
+	ph_model->directory = filename.substr(0, filename.find_last_of('/'));
+
 	Assimp::Importer Importer;
 	const aiScene* pScene;
 
@@ -731,6 +785,7 @@ void VulkanRenderer::PH_LoadModel(const std::string& filename, VertexLayout layo
 			ph_model->parts[i] = {};
 			ph_model->parts[i].vertexBase = ph_model->vertexCount;
 			ph_model->parts[i].indexBase  = ph_model->indexCount;
+			ph_model->parts[i].materialIndex = pScene->mMeshes[i]->mMaterialIndex;
 
 			ph_model->vertexCount += pScene->mMeshes[i]->mNumVertices;
 
@@ -781,7 +836,8 @@ void VulkanRenderer::PH_LoadModel(const std::string& filename, VertexLayout layo
 						break;
 						// Dummy components for padding
 					case VERTEX_COMPONENT_DUMMY_FLOAT:
-						vertexBuffer.push_back(0.0f);
+						vertexBuffer.push_back((float)(ph_model->parts[i].materialIndex));
+						//vertexBuffer.push_back(0.0f);
 						break;
 					case VERTEX_COMPONENT_DUMMY_VEC4:
 						vertexBuffer.push_back(0.0f);
@@ -841,6 +897,25 @@ void VulkanRenderer::PH_LoadModel(const std::string& filename, VertexLayout layo
 			iBufferInfo.memoryPropertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 			iBufferInfo.data = indexBuffer.data();
 			PH_CreateBuffer(iBufferInfo, &(ph_model->indices));
+		}
+
+
+		// TEXTURES
+		{
+			for (uint32_t i = 0; i < pScene->mNumMeshes; ++i)
+			{
+				aiMesh* mesh = pScene->mMeshes[i];
+				uint32_t materialIndex = mesh->mMaterialIndex;
+				aiMaterial* material = pScene->mMaterials[materialIndex];
+
+				std::vector<PH_Image> textures;
+				std::vector<PH_Image> diffuseMaps = InitMaterials(material, aiTextureType_DIFFUSE, "texture_diffuse", ph_model);
+				textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
+				//std::vector<PH_Image> specularMaps = InitMaterials(material, aiTextureType_SPECULAR, "texture_specular", ph_model);
+				//textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
+
+				ph_model->mMeshTexturesMap[materialIndex] = textures;
+			}
 		}
 	}
 	else

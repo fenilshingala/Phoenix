@@ -79,6 +79,7 @@ class Application : public VulkanRenderer
 	PH_Buffer shaderBindingTable;
 	PH_Image storageImage;
 	PH_Model model;
+	uint32_t noOfTextures;
 
 	VertexLayout vertexLayout = VertexLayout({
 		VERTEX_COMPONENT_POSITION,
@@ -219,13 +220,22 @@ public:
 		initRenderer(settings);
 
 		camera.rotation_speed *= 0.25f;
-		camera.translation_speed *= 0.5f;
+		camera.translation_speed *= 10.0f;
 		camera.type = CameraType::FirstPerson;
 		camera.set_perspective(60.0f, (float)swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 512.0f);
 		camera.set_rotation(glm::vec3(0.0f, 0.0f, 0.0f));
 		camera.set_translation(glm::vec3(0.0f, 0.0f, -1.5f));
 
-		PH_LoadModel("../../Phoenix/App/Test/Models/reflection_test.dae", vertexLayout, &model);
+		//PH_LoadModel("../../Phoenix/App/Test/Models/reflection_test.dae", vertexLayout, &model);
+		PH_LoadModel("../../Phoenix/RendererOpenGL/App/Resources/Objects/sponza/sponza.obj", vertexLayout, &model);
+		
+		for (uint32_t i = 0; i < model.mMeshTexturesMap.size(); ++i)
+		{
+			for (uint32_t j = 0; j < model.mMeshTexturesMap[i].size(); ++j)
+			{
+				++noOfTextures;
+			}
+		}
 
 		// Shader Modules
 		{
@@ -494,12 +504,20 @@ public:
 		indexBufferBinding.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
 		indexBufferBinding.pImmutableSamplers = nullptr;
 
+		VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
+		samplerLayoutBinding.binding = 5;
+		samplerLayoutBinding.descriptorCount = noOfTextures;
+		samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
+		samplerLayoutBinding.pImmutableSamplers = nullptr;
+
 		std::vector<VkDescriptorSetLayoutBinding> bindings({
 			accelerationStructureLayoutBinding,
 			resultImageLayoutBinding,
 			uniformBufferBinding,
 			vertexBufferBinding,
-			indexBufferBinding
+			indexBufferBinding,
+			samplerLayoutBinding
 			});
 
 		VkDescriptorSetLayoutCreateInfo layoutInfo{};
@@ -619,7 +637,8 @@ public:
 			{ VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV, 1 },
 			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 },
 			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2 }
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2 },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, noOfTextures }
 		};
 
 		PH_CreateDescriptorPool((uint32_t)poolSizes.size(), poolSizes.data(), 1, &descriptorPool);
@@ -717,6 +736,34 @@ public:
 		indexBufferWrite.pImageInfo = nullptr;
 		indexBufferWrite.pTexelBufferView = nullptr;
 
+		/////////////////////////////////////////////////////// TEXTURE SAMPLERS
+		std::vector<VkWriteDescriptorSet> texImageDescriptor{};
+
+		for (uint32_t i = 0; i < (uint32_t)model.parts.size(); ++i)
+		{
+			uint32_t matIndex = model.parts[i].materialIndex;
+
+			VkDescriptorImageInfo imageInfo = {};
+			imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			imageInfo.imageView = model.mMeshTexturesMap[matIndex].begin()->imageView;
+			imageInfo.sampler = model.mMeshTexturesMap[matIndex].begin()->sampler;
+				
+			VkWriteDescriptorSet samplerWrite;
+			samplerWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			samplerWrite.dstSet = descriptorSet;
+			samplerWrite.dstBinding = 5;
+			samplerWrite.dstArrayElement = 0;
+			samplerWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			samplerWrite.descriptorCount = noOfTextures;
+			samplerWrite.pImageInfo = &imageInfo;
+			samplerWrite.dstArrayElement = 0;
+			samplerWrite.pNext = nullptr;
+			samplerWrite.pImageInfo = nullptr;
+			samplerWrite.pTexelBufferView = nullptr;
+
+			texImageDescriptor.push_back(samplerWrite);
+		}
+
 		std::vector<VkWriteDescriptorSet> writeDescriptorSets = {
 			accelerationStructureWrite,
 			resultImageWrite,
@@ -724,6 +771,7 @@ public:
 			vertexBufferWrite,
 			indexBufferWrite
 		};
+		writeDescriptorSets.insert(writeDescriptorSets.end(), texImageDescriptor.begin(), texImageDescriptor.end());
 
 		PH_UpdateDeDescriptorSets(writeDescriptorSets);
 	}
@@ -831,7 +879,7 @@ public:
 		ubo.proj = glm::inverse(camera.matrices.perspective);
 		ubo.view = glm::inverse(camera.matrices.view);
 		ubo.lightPos = glm::vec4(cos(glm::radians(timer * 360.0f)) * 40.0f, -20.0f + sin(glm::radians(timer * 360.0f)) * 20.0f, 25.0f + sin(glm::radians(timer * 360.0f)) * 5.0f, 0.0f);
-
+		
 		PH_BufferUpdateInfo bufferUpdate;
 		bufferUpdate.buffer = uniformBuffer;
 		bufferUpdate.data = &ubo;
