@@ -80,6 +80,7 @@ class Application : public VulkanRenderer
 	PH_Image storageImage;
 	PH_Model model;
 	uint32_t noOfTextures;
+	PH_Image defaultTex;
 
 	VertexLayout vertexLayout = VertexLayout({
 		VERTEX_COMPONENT_POSITION,
@@ -220,22 +221,26 @@ public:
 		initRenderer(settings);
 
 		camera.rotation_speed *= 0.25f;
-		camera.translation_speed *= 10.0f;
+		camera.translation_speed *= 30.0f;
 		camera.type = CameraType::FirstPerson;
 		camera.set_perspective(60.0f, (float)swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 512.0f);
 		camera.set_rotation(glm::vec3(0.0f, 0.0f, 0.0f));
 		camera.set_translation(glm::vec3(0.0f, 0.0f, -1.5f));
 
+		// default
+		PH_ImageCreateInfo imageInfo;
+		imageInfo.path = "../../Phoenix/App/Test/textures/white.png";
+		imageInfo.aspectBits = VK_IMAGE_ASPECT_COLOR_BIT;
+		imageInfo.memoryProperty = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+		imageInfo.usageFlags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		PH_CreateTexture(imageInfo, &defaultTex);
+		defaultTex.sampler = PH_CreateSampler();
+
 		//PH_LoadModel("../../Phoenix/App/Test/Models/reflection_test.dae", vertexLayout, &model);
 		PH_LoadModel("../../Phoenix/RendererOpenGL/App/Resources/Objects/sponza/sponza.obj", vertexLayout, &model);
 		
-		for (uint32_t i = 0; i < model.mMeshTexturesMap.size(); ++i)
-		{
-			for (uint32_t j = 0; j < model.mMeshTexturesMap[i].size(); ++j)
-			{
-				++noOfTextures;
-			}
-		}
+		noOfTextures = (uint32_t)model.parts.size();
 
 		// Shader Modules
 		{
@@ -406,6 +411,9 @@ public:
 
 		// MODEL
 		PH_DeleteModel(&model);
+
+		PH_DeleteTexture(&defaultTex);
+		PH_DeleteSampler(&defaultTex.sampler);
 
 		exitRenderer();
 	}
@@ -737,32 +745,39 @@ public:
 		indexBufferWrite.pTexelBufferView = nullptr;
 
 		/////////////////////////////////////////////////////// TEXTURE SAMPLERS
-		std::vector<VkWriteDescriptorSet> texImageDescriptor{};
-
+		std::vector<VkDescriptorImageInfo> imageInfos(noOfTextures);
 		for (uint32_t i = 0; i < (uint32_t)model.parts.size(); ++i)
 		{
-			uint32_t matIndex = model.parts[i].materialIndex;
-
-			VkDescriptorImageInfo imageInfo = {};
-			imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			imageInfo.imageView = model.mMeshTexturesMap[matIndex].begin()->imageView;
-			imageInfo.sampler = model.mMeshTexturesMap[matIndex].begin()->sampler;
-				
-			VkWriteDescriptorSet samplerWrite;
-			samplerWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			samplerWrite.dstSet = descriptorSet;
-			samplerWrite.dstBinding = 5;
-			samplerWrite.dstArrayElement = 0;
-			samplerWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			samplerWrite.descriptorCount = noOfTextures;
-			samplerWrite.pImageInfo = &imageInfo;
-			samplerWrite.dstArrayElement = 0;
-			samplerWrite.pNext = nullptr;
-			samplerWrite.pImageInfo = nullptr;
-			samplerWrite.pTexelBufferView = nullptr;
-
-			texImageDescriptor.push_back(samplerWrite);
+			int matIndex = model.parts[i].materialIndex;
+			if (matIndex != -1 && matIndex >= 0)
+			{
+				imageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				imageInfos[i].imageView = model.mMeshTexturesMap[matIndex].begin()->imageView;
+				imageInfos[i].sampler = model.mMeshTexturesMap[matIndex].begin()->sampler;
+			}
+			else if(matIndex == -1)
+			{
+				imageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				imageInfos[i].imageView = defaultTex.imageView;
+				imageInfos[i].sampler = defaultTex.sampler;
+			}
+			else
+			{
+				assert(0);
+			}
 		}
+
+		VkWriteDescriptorSet texImageDescriptor;
+		texImageDescriptor.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		texImageDescriptor.dstSet = descriptorSet;
+		texImageDescriptor.dstBinding = 5;
+		texImageDescriptor.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		texImageDescriptor.descriptorCount = noOfTextures;
+		texImageDescriptor.pImageInfo = imageInfos.data();
+		texImageDescriptor.dstArrayElement = 0;
+		texImageDescriptor.pNext = nullptr;
+		texImageDescriptor.pTexelBufferView = nullptr;
+		texImageDescriptor.pBufferInfo = nullptr;
 
 		std::vector<VkWriteDescriptorSet> writeDescriptorSets = {
 			accelerationStructureWrite,
@@ -771,8 +786,11 @@ public:
 			vertexBufferWrite,
 			indexBufferWrite
 		};
-		writeDescriptorSets.insert(writeDescriptorSets.end(), texImageDescriptor.begin(), texImageDescriptor.end());
-
+		if (noOfTextures > 0)
+		{
+			writeDescriptorSets.emplace_back(texImageDescriptor);
+		}
+		
 		PH_UpdateDeDescriptorSets(writeDescriptorSets);
 	}
 	
@@ -878,7 +896,7 @@ public:
 		ubo.model = glm::mat4(1.0f);
 		ubo.proj = glm::inverse(camera.matrices.perspective);
 		ubo.view = glm::inverse(camera.matrices.view);
-		ubo.lightPos = glm::vec4(cos(glm::radians(timer * 360.0f)) * 40.0f, -20.0f + sin(glm::radians(timer * 360.0f)) * 20.0f, 25.0f + sin(glm::radians(timer * 360.0f)) * 5.0f, 0.0f);
+		ubo.lightPos = glm::vec4(cos(glm::radians(360.0f)) * 40.0f, -20.0f + sin(glm::radians(360.0f)) * 20.0f, 25.0f + sin(glm::radians(360.0f)) * 5.0f, 0.0f);
 		
 		PH_BufferUpdateInfo bufferUpdate;
 		bufferUpdate.buffer = uniformBuffer;

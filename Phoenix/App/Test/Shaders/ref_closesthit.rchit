@@ -57,16 +57,23 @@ void main()
 	Vertex v1 = unpack(index.y);
 	Vertex v2 = unpack(index.z);
 
-	// Interpolate normal
+	// Interpolate normal & uv
 	const vec3 barycentricCoords = vec3(1.0f - attribs.x - attribs.y, attribs.x, attribs.y);
 	vec3 normal = normalize(v0.normal * barycentricCoords.x + v1.normal * barycentricCoords.y + v2.normal * barycentricCoords.z);
-
+	vec2 uv = v0.uv * barycentricCoords.x + v1.uv * barycentricCoords.y + v2.uv * barycentricCoords.z;
+	
 	// Basic lighting
 	vec3 lightVector = normalize(ubo.lightPos.xyz);
 	float dot_product = max(dot(lightVector, normal), 0.6);
-	//rayPayload.color = v0.color * vec3(dot_product);
-	int matIndex = int(v0.materialIndex);
-	rayPayload.color = texture(texSampler[matIndex], v0.uv).xyz * vec3(dot_product);
+	
+	if(v0.materialIndex == -1.0f)
+	{
+		rayPayload.color = v0.color * vec3(dot_product);
+	}
+	else
+	{
+		rayPayload.color = texture(texSampler[int(v0.materialIndex)], uv).xyz * v0.color * vec3(dot_product);
+	}
 	rayPayload.distance = gl_RayTmaxNV;
 	rayPayload.normal = normal;
 

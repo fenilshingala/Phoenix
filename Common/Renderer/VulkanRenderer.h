@@ -139,7 +139,7 @@ public:
 		uint32_t vertexCount;
 		uint32_t indexBase;
 		uint32_t indexCount;
-		uint32_t materialIndex;
+		int		 materialIndex;
 	};
 	std::vector<ModelPart> parts;
 	std::unordered_map<uint32_t, std::vector<PH_Image>> mMeshTexturesMap;

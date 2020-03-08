@@ -768,9 +768,6 @@ void VulkanRenderer::PH_LoadModel(const std::string& filename, VertexLayout layo
 		ph_model->parts.clear();
 		ph_model->parts.resize(pScene->mNumMeshes);
 
-		glm::vec3 scale(0.25f);
-		glm::vec2 uvscale(0.25f);
-		glm::vec3 center(0.0f);
 		std::vector<float> vertexBuffer;
 		std::vector<uint32_t> indexBuffer;
 
@@ -785,12 +782,25 @@ void VulkanRenderer::PH_LoadModel(const std::string& filename, VertexLayout layo
 			ph_model->parts[i] = {};
 			ph_model->parts[i].vertexBase = ph_model->vertexCount;
 			ph_model->parts[i].indexBase  = ph_model->indexCount;
-			ph_model->parts[i].materialIndex = pScene->mMeshes[i]->mMaterialIndex;
+			std::vector<PH_Image> textures;
+
+			aiMaterial* paiMat = pScene->mMaterials[paiMesh->mMaterialIndex];
+			if (paiMat->GetTextureCount(aiTextureType_DIFFUSE) == 0)
+			{
+				ph_model->parts[i].materialIndex = -1;
+			}
+			else
+			{
+				ph_model->parts[i].materialIndex = (int)i;//paiMesh->mMaterialIndex - 1;
+				std::vector<PH_Image> diffuseMaps = InitMaterials(paiMat, aiTextureType_DIFFUSE, "texture_diffuse", ph_model);
+				textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
+			}
+			ph_model->mMeshTexturesMap.insert(std::pair<uint32_t, std::vector<PH_Image>>(i/*ph_model->parts[i].materialIndex*/, textures));
 
 			ph_model->vertexCount += pScene->mMeshes[i]->mNumVertices;
 
 			aiColor3D pColor(0.f, 0.f, 0.f);
-			pScene->mMaterials[paiMesh->mMaterialIndex]->Get(AI_MATKEY_COLOR_DIFFUSE, pColor);
+			paiMat->Get(AI_MATKEY_COLOR_DIFFUSE, pColor);
 
 			const aiVector3D Zero3D(0.0f, 0.0f, 0.0f);
 
@@ -806,9 +816,9 @@ void VulkanRenderer::PH_LoadModel(const std::string& filename, VertexLayout layo
 				{
 					switch (component) {
 					case VERTEX_COMPONENT_POSITION:
-						vertexBuffer.push_back(pPos->x * scale.x + center.x);
-						vertexBuffer.push_back(-pPos->y * scale.y + center.y);
-						vertexBuffer.push_back(pPos->z * scale.z + center.z);
+						vertexBuffer.push_back(pPos->x);
+						vertexBuffer.push_back(-pPos->y);
+						vertexBuffer.push_back(pPos->z);
 						break;
 					case VERTEX_COMPONENT_NORMAL:
 						vertexBuffer.push_back(pNormal->x);
@@ -816,8 +826,8 @@ void VulkanRenderer::PH_LoadModel(const std::string& filename, VertexLayout layo
 						vertexBuffer.push_back(pNormal->z);
 						break;
 					case VERTEX_COMPONENT_UV:
-						vertexBuffer.push_back(pTexCoord->x * uvscale.s);
-						vertexBuffer.push_back(pTexCoord->y * uvscale.t);
+						vertexBuffer.push_back(pTexCoord->x);
+						vertexBuffer.push_back(1.0f - pTexCoord->y);
 						break;
 					case VERTEX_COMPONENT_COLOR:
 						vertexBuffer.push_back(pColor.r);
@@ -836,8 +846,7 @@ void VulkanRenderer::PH_LoadModel(const std::string& filename, VertexLayout layo
 						break;
 						// Dummy components for padding
 					case VERTEX_COMPONENT_DUMMY_FLOAT:
-						vertexBuffer.push_back((float)(ph_model->parts[i].materialIndex));
-						//vertexBuffer.push_back(0.0f);
+						vertexBuffer.push_back((float)ph_model->parts[i].materialIndex);
 						break;
 					case VERTEX_COMPONENT_DUMMY_VEC4:
 						vertexBuffer.push_back(0.0f);
@@ -875,7 +884,6 @@ void VulkanRenderer::PH_LoadModel(const std::string& filename, VertexLayout layo
 			}
 		}
 
-
 		uint32_t vBufferSize = static_cast<uint32_t>(vertexBuffer.size()) * sizeof(float);
 		uint32_t iBufferSize = static_cast<uint32_t>(indexBuffer.size()) * sizeof(uint32_t);
 
@@ -898,25 +906,6 @@ void VulkanRenderer::PH_LoadModel(const std::string& filename, VertexLayout layo
 			iBufferInfo.data = indexBuffer.data();
 			PH_CreateBuffer(iBufferInfo, &(ph_model->indices));
 		}
-
-
-		// TEXTURES
-		{
-			for (uint32_t i = 0; i < pScene->mNumMeshes; ++i)
-			{
-				aiMesh* mesh = pScene->mMeshes[i];
-				uint32_t materialIndex = mesh->mMaterialIndex;
-				aiMaterial* material = pScene->mMaterials[materialIndex];
-
-				std::vector<PH_Image> textures;
-				std::vector<PH_Image> diffuseMaps = InitMaterials(material, aiTextureType_DIFFUSE, "texture_diffuse", ph_model);
-				textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
-				//std::vector<PH_Image> specularMaps = InitMaterials(material, aiTextureType_SPECULAR, "texture_specular", ph_model);
-				//textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
-
-				ph_model->mMeshTexturesMap[materialIndex] = textures;
-			}
-		}
 	}
 	else
 	{
@@ -931,6 +920,12 @@ void VulkanRenderer::PH_DeleteModel(PH_Model* ph_model)
 	if (ph_model->indices.buffer != VK_NULL_HANDLE)
 	{
 		PH_DeleteBuffer(&ph_model->indices);
+	}
+
+	for (PH_Image& tex : ph_model->textures_loaded)
+	{
+		PH_DeleteTexture(&tex);
+		PH_DeleteSampler(&tex.sampler);
 	}
 }
 
