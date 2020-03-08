@@ -237,16 +237,16 @@ public:
 		PH_CreateTexture(imageInfo, &defaultTex);
 		defaultTex.sampler = PH_CreateSampler();
 
-		//PH_LoadModel("../../Phoenix/App/Test/Models/reflection_test.dae", vertexLayout, &model);
-		PH_LoadModel("../../Phoenix/RendererOpenGL/App/Resources/Objects/sponza/sponza.obj", vertexLayout, &model);
+		PH_LoadModel("../../Phoenix/App/Test/Models/reflection_test.dae", vertexLayout, &model);
+		//PH_LoadModel("../../Phoenix/RendererOpenGL/App/Resources/Objects/sponza/sponza.obj", vertexLayout, &model);
 		
 		noOfTextures = (uint32_t)model.parts.size();
 
 		// Shader Modules
 		{
-			PH_CreateShaderModule("../../Phoenix/App/Test/Shaders/SpirV/ref_raygen.rgen.spv", &RayGenModule);
-			PH_CreateShaderModule("../../Phoenix/App/Test/Shaders/SpirV/ref_miss.rmiss.spv", &MissModule);
-			PH_CreateShaderModule("../../Phoenix/App/Test/Shaders/SpirV/ref_closesthit.rchit.spv", &ClosestHitModule);
+			PH_CreateShaderModule("..\\..\\Phoenix\\App\\Test\\Shaders\\ref_raygen.rgen", &RayGenModule);
+			PH_CreateShaderModule("..\\..\\Phoenix\\App\\Test\\Shaders\\ref_miss.rmiss", &MissModule);
+			PH_CreateShaderModule("..\\..\\Phoenix\\App\\Test\\Shaders\\ref_closesthit.rchit", &ClosestHitModule);
 		}
 
 #pragma region RT_Scene

@@ -9,6 +9,9 @@
 #include <iostream>
 #include <iomanip>
 
+#include <direct.h>
+#define GetCurrentDir _getcwd
+
 #include <unordered_map>
 #include <unordered_set>
 
@@ -689,19 +692,46 @@ static std::vector<char> readFile(const char* filename)
 	return buffer;
 }
 
-void VulkanRenderer::PH_CreateShaderModule(const char* path, VkShaderModule* shaderModule)
+void VulkanRenderer::PH_CreateShaderModule(const char* shaderPath, VkShaderModule* shaderModule)
 {
-	std::vector<char> code = readFile(path);
+	// convert to spirv
+	std::string path = std::string(shaderPath);
 
-	VkShaderModuleCreateInfo createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	createInfo.codeSize = code.size();
-	createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
+	size_t index = path.find_last_of("\\");
+	std::string filePath = path.substr(0, index);
+	std::string shaderNameWithExt = path.substr(index + 1);
+
+	std::string vulkan_env = "VULKAN_SDK";
+	char* vulkan_env_str_buffer;
+	size_t bufferCount;
+	_dupenv_s(&vulkan_env_str_buffer, &bufferCount, vulkan_env.c_str());
 	
-	if (vkCreateShaderModule(device, &createInfo, nullptr, shaderModule) != VK_SUCCESS)
+	char cdbuffer[256];
+	GetCurrentDir(cdbuffer, 256);
+	
+	std::string glslangValidator = vulkan_env_str_buffer;
+	glslangValidator += "\\Bin32\\glslangValidator.exe";
+	std::string inputFilePath = cdbuffer + std::string("\\") + filePath + std::string("\\") + shaderNameWithExt;
+	std::string outputFilePath = cdbuffer + std::string("\\") + filePath + "\\SpirV\\";
+
+	std::string cmd = glslangValidator + " -V " + inputFilePath + " -o " + outputFilePath + shaderNameWithExt + ".spv";
+	
+	if (system(cmd.c_str()) == 0)
 	{
-		throw std::runtime_error("failed to create shader module!");
+		// create shader module
+		std::vector<char> code = readFile((outputFilePath + shaderNameWithExt + ".spv").c_str());
+
+		VkShaderModuleCreateInfo createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		createInfo.codeSize = code.size();
+		createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
+	
+		if (vkCreateShaderModule(device, &createInfo, nullptr, shaderModule) != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to create shader module!");
+		}
 	}
+
 }
 
 void VulkanRenderer::PH_DestroyShaderModule(VkShaderModule* shaderModule)

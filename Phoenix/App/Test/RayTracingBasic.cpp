@@ -255,9 +255,9 @@ public:
 
 		// Shader Modules
 		{
-			PH_CreateShaderModule("../../Phoenix/App/Test/Shaders/SpirV/raygen.rgen.spv", &RayGenModule);
-			PH_CreateShaderModule("../../Phoenix/App/Test/Shaders/SpirV/miss.rmiss.spv", &MissModule);
-			PH_CreateShaderModule("../../Phoenix/App/Test/Shaders/SpirV/closesthit.rchit.spv", &ClosestHitModule);
+			PH_CreateShaderModule("..\\..\\Phoenix\\App\\Test\\Shaders\\raygen.rgen", &RayGenModule);
+			PH_CreateShaderModule("..\\..\\Phoenix\\App\\Test\\Shaders\\miss.rmiss", &MissModule);
+			PH_CreateShaderModule("..\\..\\Phoenix\\App\\Test\\Shaders\\closesthit.rchit", &ClosestHitModule);
 		}
 
 #pragma region RT_Scene

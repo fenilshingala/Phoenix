@@ -157,8 +157,8 @@ public:
 
 		//shader module
 		{
-			PH_CreateShaderModule("../../Phoenix/App/Test/Shaders/SpirV/vert.spv", &vertexShaderModule);
-			PH_CreateShaderModule("../../Phoenix/App/Test/Shaders/SpirV/frag.spv", &fragmentShaderModule);
+			PH_CreateShaderModule("..\\..\\Phoenix\\App\\Test\\Shaders\\basic.vert", &vertexShaderModule);
+			PH_CreateShaderModule("..\\..\\Phoenix\\App\\Test\\Shaders\\basic.frag", &fragmentShaderModule);
 		}
 	}
 

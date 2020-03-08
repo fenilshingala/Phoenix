@@ -78,5 +78,5 @@ void main()
 	rayPayload.normal = normal;
 
 	// Objects with full white vertex color are treated as reflectors
-	rayPayload.reflector = ((v0.color.r == 1.0f) && (v0.color.g == 1.0f) && (v0.color.b == 1.0f)) ? 0.0f : 0.0f; 
+	rayPayload.reflector = ((v0.color.r == 1.0f) && (v0.color.g == 1.0f) && (v0.color.b == 1.0f)) ? 1.0f : 0.0f; 
 }
