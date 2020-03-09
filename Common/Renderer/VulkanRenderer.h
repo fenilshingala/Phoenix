@@ -40,6 +40,16 @@ struct PH_ImageCreateInfo
 	VkImageAspectFlagBits	aspectBits;
 };
 
+enum class TextureType
+{
+	TEX_TYPE_DIFFUSE = 0,
+	TEX_TYPE_SPECULAR,
+	TEX_TYPE_HEIGHT,
+	TEX_TYPE_AMBIENT,
+
+	TEX_TYPE_COUNT
+};
+
 struct PH_Image
 {
 	VkImage				image;
@@ -53,6 +63,7 @@ struct PH_Image
 	std::string			path;
 
 	VkSampler			sampler; // for combined image sampler
+	TextureType			textureType;
 };
 
 struct PH_BufferCreateInfo
@@ -85,8 +96,12 @@ typedef enum Vertex_Component {
 	VERTEX_COMPONENT_UV = 0x3,
 	VERTEX_COMPONENT_TANGENT = 0x4,
 	VERTEX_COMPONENT_BITANGENT = 0x5,
-	VERTEX_COMPONENT_DUMMY_FLOAT = 0x6,
-	VERTEX_COMPONENT_DUMMY_VEC4 = 0x7
+	VERTEX_COMPONENT_DIFFUSE_MAT_INDEX = 0x6,
+	VERTEX_COMPONENT_SPECULAR_MAT_INDEX = 0x7,
+	VERTEX_COMPONENT_HEIGHT_MAT_INDEX = 0x8,
+	VERTEX_COMPONENT_AMBIENT_MAT_INDEX = 0x9,
+	VERTEX_COMPONENT_DUMMY_FLOAT = 0x10,
+	VERTEX_COMPONENT_DUMMY_VEC4 = 0x11
 } Vertex_Component;
 
 struct VertexLayout {
@@ -110,6 +125,10 @@ public:
 				res += 2 * sizeof(float);
 				break;
 			case VERTEX_COMPONENT_DUMMY_FLOAT:
+			case VERTEX_COMPONENT_DIFFUSE_MAT_INDEX:
+			case VERTEX_COMPONENT_SPECULAR_MAT_INDEX:
+			case VERTEX_COMPONENT_HEIGHT_MAT_INDEX:
+			case VERTEX_COMPONENT_AMBIENT_MAT_INDEX:
 				res += sizeof(float);
 				break;
 			case VERTEX_COMPONENT_DUMMY_VEC4:
@@ -123,7 +142,6 @@ public:
 		return res;
 	}
 };
-
 
 struct PH_Model
 {
@@ -139,7 +157,7 @@ public:
 		uint32_t vertexCount;
 		uint32_t indexBase;
 		uint32_t indexCount;
-		int		 materialIndex;
+		int		 materialIndexes[(int)TextureType::TEX_TYPE_COUNT];
 	};
 	std::vector<ModelPart> parts;
 	std::unordered_map<uint32_t, std::vector<PH_Image>> mMeshTexturesMap;
@@ -191,7 +209,7 @@ public:
 	// MODELS
 	void PH_LoadModel(const std::string& filename, VertexLayout layout, PH_Model* ph_model);
 	void PH_DeleteModel(PH_Model* ph_model);
-	std::vector<PH_Image> InitMaterials(const aiMaterial* material, aiTextureType type, std::string typeName, PH_Model* ph_model);
+	std::vector<PH_Image> InitMaterials(const aiMaterial* material, aiTextureType type, PH_Model* ph_model, TextureType texType);
 
 	// DescriptorSet Layout
 	void PH_CreateDescriptorSetLayout(VkDescriptorSetLayoutCreateInfo layoutInfo, VkDescriptorSetLayout* descriptorSetLayout);
